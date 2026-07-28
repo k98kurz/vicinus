@@ -1,5 +1,5 @@
 from vicinus.hamming import hamming_distance, hamming_similarity
-from vicinus.helpers import select
+from vicinus.helpers import rank, select
 from vicinus.levenshtein import levenshtein_distance, levenshtein_similarity
 from vicinus.ngf_idf import (
     ngf_index, ng_count, ngf,

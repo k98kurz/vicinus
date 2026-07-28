@@ -1,5 +1,6 @@
 from math import log
 from vicinus.errors import type_assert, value_assert
+from vicinus.helpers import rank, select
 from vicinus.ngrams import n_grams
 from vicinus.sparse_vector import SparseVector
 from vicinus.tokenize import tokenize
@@ -129,21 +130,16 @@ def ngf_idf_rank(
         vectors. Returns a sorted list of form `[(similarity, index)]`.
     """
     qvec = ngf_idf_query(query, corpus_idf, ng_size)
-    ranks = []
-    for i in range(len(text_vecs)):
-        ranks.append((qvec.cosine_similarity(text_vecs[i]), i))
-
-    ranks.sort(reverse=True)
-    return ranks
+    return rank(qvec.cosine_similarity, text_vecs)
 
 
 def ngf_idf_select(
         query: str, corpus_idf: SparseVector, text_vecs: list[SparseVector],
-        choose_top: int, ng_size: int = 3 
+        k: int = 4, ng_size: int = 3 
     ) -> list[tuple[float, int]]:
     """Runs NGF-IDF cosine similarity between the query and the text
         vectors. Returns the top `choose_top` candidates in a sorted
         list of form `[(similarity, index)]`.
     """
     ranks = ngf_idf_rank(query, corpus_idf, text_vecs, ng_size)
-    return ranks[:choose_top]
+    return select(ranks, k)
