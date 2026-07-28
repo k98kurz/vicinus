@@ -53,13 +53,33 @@ ng2 = n_grams(text2, size=3)
 similarity = jaccard_index(ng1, ng2) # between 0 and 1.0
 ```
 
-## NGF-IDF
+## NGF (Cosine Similarity)
 
-Similar to TF-IDF, but with N-Grams instead of Terms. Uses a `SparseVector` under
-the hood for efficiency. Uses `n_grams` but not `jaccard_index`. This involves a
-setup phase in which the corpus is processed, then a query phase once the corpus
-IDF vector and individual text NGF-IDF vectors are available. Ranking is done via
-cosine similarity.
+Similar to TF, but with N-Grams instead of Terms. Uses `SparseVector`s for
+efficiency. Uses `n_grams` but not `jaccard_index`. Does not involve a setup phase
+that must be rerun when a text in the corpuse changes; only that text must be
+reprocessed.
+
+```python
+from vicinus import ngf, ngf_rank, ngf_select
+
+corpus = ["Text 1 is some text...", "Text 2 is another thing...", ...]
+vecs = [ngf(t) for t in corpus]
+query = "text about something"
+# to sort all texts
+rankings = ngf_rank(query, vecs)
+# or select top k=2
+candidates = ngf_select(query, vecs, k=2) # or candidates = select(rankings, 2)
+```
+
+## NGF-IDF (Cosine Similarity)
+
+Similar to TF-IDF, but with N-Grams instead of Terms. Uses `SparseVector`s for
+efficiency. Uses `n_grams` but not `jaccard_index`. Involves a setup phase in which
+the corpus is processed to derive a corpus IDF vector and NGF-IDF vectors, then a
+query phase once the corpus IDF vector and individual text NGF-IDF vectors are
+available. Ranking is done via cosine similarity. Adding or editing a text in the
+corpus requires rerunning setup on the whole corpus.
 
 ```python
 from vicinus import ngf_idf_setup, ngf_idf_rank, ngf_idf_select
@@ -87,7 +107,7 @@ from vicinus import rank, select, hamming_similarity
 texts = [...]
 query = "something"
 rankings = rank(lambda t: hamming_similarity(query, t), texts)
-candidates = select(rankings, k=2)
+candidates = select(rankings, 2)
 ```
 
 ## Advanced Use
@@ -112,6 +132,5 @@ The library exposes some additional functions that may be useful for experimenta
 - `tokenize(text: str) -> list[str]`: split, lowercase, strip non-alnum
 - `ng_count(text: str, size: int=3, ngs: str[str]=None) -> SparseVector`
 - `ngf_index(ng: str) -> int`: calculate the NGF vec index for a given alnum N-Gram
-- `ngf(text: str, size: int=3, vec: SparseVector=None)`: calculate NGF for text
 - `ngf_idf_query(query: str, corpus_idf: SparseVector, ng_size: int=3) -> SparseVector`:
   proceses a query into an NGF-IDF vector; used by `ngf_idf_rank` and `ngf_idf_select`

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vicinus"
+version = "0.0.1"
+authors = [
+  { name="k98kurz", email="k98kurz@gmail.com" },
+]
+description = "Fuzzy search and vector DB library from scratch."
+readme = "readme.md"
+requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: ISC License (ISCL)",
+  "Operating System :: OS Independent",
+  "Topic :: Text Processing :: Linguistic",
+  "Topic :: Database",
+]
+
+[project.urls]
+"Homepage" = "https://pycelium.com"
+"Repository" = "https://github.com/k98kurz/vicinus"
+"Bug Tracker" = "https://github.com/k98kurz/vicinus/issues"
+
+[project.scripts]
+vicinus = "vicinus.cli:main"
+
+[project.optional-dependencies]
+docs = [
+  "autodox >= 0.1.16"
+]
+
+[tool.hatch.build.targets.wheel]
+exclude = [
+  "/tests",
+  ".github",
+]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/tests",
+  ".github",
+]

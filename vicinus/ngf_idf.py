@@ -54,6 +54,26 @@ def ngf(text: str, size: int = 3, vec: SparseVector = None) -> SparseVector:
     return new_vec
 
 
+def ngf_rank(
+        query: str, text_vecs: list[SparseVector], ng_size: int = 3
+    ) -> list[tuple[float, int]]:
+    """Runs NGF cosine similarity between the query and the text
+        vectors. Returns a sorted list of form `[(similarity, index)]`.
+    """
+    qvec = ngf(query, size=ng_size)
+    return rank(qvec.cosine_similarity, text_vecs)
+
+
+def ngf_select(
+        query: str, text_vecs: list[SparseVector], k: int = 4, ng_size: int = 3
+    ) -> list[tuple[float, int]]:
+    """Runs NGF cosine similarity between the query and the text
+        vectors. Returns the top `k` candidates in a sorted list of form
+        `[(similarity, index)]`.
+    """
+    ranks = ngf_rank(query, text_vecs, ng_size)
+    return select(ranks, k)
+
 def ngf_idf_setup(
         corpus: list[str], ng_size: int = 3
     ) -> tuple[SparseVector, list[SparseVector]]:
@@ -138,8 +158,8 @@ def ngf_idf_select(
         k: int = 4, ng_size: int = 3 
     ) -> list[tuple[float, int]]:
     """Runs NGF-IDF cosine similarity between the query and the text
-        vectors. Returns the top `choose_top` candidates in a sorted
-        list of form `[(similarity, index)]`.
+        vectors. Returns the top `k` candidates in a sorted list of form
+        `[(similarity, index)]`.
     """
     ranks = ngf_idf_rank(query, corpus_idf, text_vecs, ng_size)
     return select(ranks, k)
