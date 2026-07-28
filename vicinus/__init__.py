@@ -1,4 +1,5 @@
 from vicinus.hamming import hamming_distance, hamming_similarity
+from vicinus.helpers import select
 from vicinus.levenshtein import levenshtein_distance, levenshtein_similarity
 from vicinus.ngf_idf import (
     ngf_index, ng_count, ngf,
@@ -7,3 +8,4 @@ from vicinus.ngf_idf import (
 from vicinus.ngrams import n_grams, jaccard_index
 from vicinus.sparse_vector import SparseVector
 from vicinus.tokenize import tokenize
+
