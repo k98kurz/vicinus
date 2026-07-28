@@ -23,9 +23,9 @@ def ng_count(text: str, size: int = 3, ngs: set[str] = None) -> SparseVector:
     """Calculate the N-Gram Count of some text. First step in NGF or
         NGF-IDF analysis, where NGF is like TF but with N-Grams instead
         of whole words. The `size` parameter controls N-Gram size.
-        Produces a sparse vector of form `{index: count}` with max
-        length `36^size`, where element index is ordered by N-Gram
-        alphanumeric order, e.g. 000, 001, ..., 0a0, 0a1, ..., zzz.
+        Produces a SparseVector with max length `36^size`, where element
+        index is ordered by N-Gram alphanumeric order, e.g. 000, 001,
+        ..., 0a0, 0a1, ..., zzz.
     """
     text = ''.join(tokenize(text))
     ngs = ngs or n_grams(text, size)
@@ -39,11 +39,11 @@ def ng_count(text: str, size: int = 3, ngs: set[str] = None) -> SparseVector:
 def ngf(text: str, size: int = 3, vec: SparseVector = None) -> SparseVector:
     """Calculate the N-Gram Frequency of some text. Analogous to TF, but
         with N-Grams instead of whole words. The `size` parameter
-        controls N-Gram size. Produces a sparse vector of form
-        `{index: frequency}` with max length `36^size`, where element
-        index is ordered by N-Gram alphanumeric order, e.g. 000, 001,
-        ..., 0a0, 0a1, ..., zzz. Pass `vec` result of `ng_count` to
-        bypass retokenization of the text and recalculation of N-Grams.
+        controls N-Gram size. Produces a SparseVector max length
+        `36^size`, where element index is ordered by N-Gram alphanumeric
+        order, e.g. 000, 001, ..., 0a0, 0a1, ..., zzz. Pass `vec` result
+        of `ng_count` to bypass retokenization of the text and
+        recalculation of N-Grams.
     """
     vec = vec or ng_count(text, size=size)
     type_assert(isinstance(vec, SparseVector), 'vec must be SparseVector')
