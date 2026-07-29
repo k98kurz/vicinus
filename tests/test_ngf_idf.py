@@ -64,7 +64,6 @@ class TestNGFIDF(unittest.TestCase):
 
     def test_ngf_rank_scores_decrease_and_become_more_accurate_with_n_gram_size(self):
         vecs = [ngf(d.text) for d in self.docdb.docs]
-        query = "spiritual disease"
         vecs1 = [ngf(d.text, 2) for d in self.docdb.docs]
         vecs2 = [ngf(d.text, 5) for d in self.docdb.docs]
         query = "spiritual disease psychic illness"
@@ -130,6 +129,26 @@ class TestNGFIDF(unittest.TestCase):
         selection = ngf_idf_select(query, idf, vecs, k=k)
         select_ids = [s[1] for s in selection]
         assert select_ids == rank_ids[:k], (rankings, selection)
+
+    def test_ngf_idf_rank_scores_decrease_and_become_more_accurate_with_n_gram_size(self):
+        corpus = [d.text for d in self.docdb.docs]
+        idf1, vecs1 = ngf_idf_setup(corpus, ng_size=2)
+        idf2, vecs2 = ngf_idf_setup(corpus, ng_size=5)
+        query = "spiritual disease psychic illness"
+        rankings1 = ngf_idf_rank(query, idf1, vecs1, 2)
+        rankings2 = ngf_idf_rank(query, idf2, vecs2, 5)
+
+        # decrease total scores
+        total_score1 = sum([r[0] for r in rankings1])
+        total_score2 = sum([r[0] for r in rankings2])
+        assert total_score2 < total_score1, (total_score2, total_score1)
+
+        # increase accuracy
+        top_r1 = self.docdb.get(rankings1[0][1]).title
+        assert 'spirit' not in top_r1, top_r1
+
+        top_r2 = self.docdb.get(rankings2[0][1]).title
+        assert 'spirit' in top_r2, top_r2
 
 
 if __name__ == '__main__':

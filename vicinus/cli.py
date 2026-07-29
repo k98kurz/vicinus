@@ -11,7 +11,7 @@ def get_skill_command(mode: str, output_dir: str | None = None) -> None:
     if mode == 'default':
         return print(skill_md)
     elif mode in ('agent', 'codex'):
-        output_dir = ...
+        output_dir = '.agent/skills'
     elif mode == 'claude':
         output_dir = '.claude/skills'
     elif mode == 'cursor':
