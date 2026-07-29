@@ -1,0 +1,26 @@
+Project Title: N-Gram Field Inverse Document Frequency (NGF-IDF)
+Version: 1.0
+Date: October 26, 2023
+
+Problem Statement
+Traditional language modeling techniques often rely on standard Term-Frequency Inverse Document Frequency (TF-IDF), which treats text based on individual words (terms). This approach suffers from two major limitations: first, it overlooks crucial context and morphological variations by ignoring subword relationships; second, when applied to large corpuses, the resulting sparse vector representation becomes excessively high-dimensional, computationally expensive to store, and slow for direct matching, especially across massive index sets.
+
+Proposed Solution
+NGF-IDF introduces a structural evolution of IDF scoring by replacing discrete terms with N-Grams (contiguous sequences of N characters or words). Crucially, instead of treating the presence of an N-Gram as merely contributing to a high-dimensional sparse vector count, NGF-IDF maps and indexes the unique N-Grams into a bounded set of finite indices. This index-based approach drastically reduces computational overhead while preserving granular linguistic detail.
+
+Methodology Overview
+1.  N-Gram Generation: Text input is pre-processed to generate all N-gram sequences (e.g., bi-grams, tri-grams). This captures local semantic patterns and mitigates issues related to inflections or minor spelling variations better than token-level matching.
+2.  Index Mapping: Each unique N-Gram encountered across the entire corpus is assigned a unique, bounded integer index key. The full list of these keys forms the finite vocabulary space for NGF-IDF. This process converts the dictionary from an arbitrary string set to a constrained, numerical index domain.
+3.  Scoring Mechanism: The core scoring remains IDF (measuring rarity across documents), but instead of calculating document frequency per unique term, it calculates Document Frequency and Term Frequency per unique N-Gram Index ID within each document.
+4.  Vector Representation Transformation: Instead of storing a sparse vector whose dimension count equals the total number of unique terms in the vocabulary, we store only the indices (the keys) present in a document, along with their associated counts. This transforms high-dimensional sparsity into an efficient list/map structure referenced by bounded integer pointers.
+
+Technical Advantage and Impact
+Computational Efficiency: By using bounded index IDs instead of full strings or variable dimension vectors, memory footprint is significantly reduced. The matching process shifts from expensive string hashing and large sparse matrix multiplication toward rapid array lookup and integer comparison—an order-of-magnitude improvement in scaling for massive corpuses.
+
+Linguistic Granularity: N-Grams improve context capture beyond the scope of single words (e.g., differentiating between "running" and "runner"). This makes the model more robust to linguistic variations while maintaining high specificity.
+
+Scalability: The index-based architecture ensures that even as the vocabulary size grows, the overhead associated with handling variable string lengths and massive dimensionality remains constrained by fixed integer limits, making NGF-IDF suitable for petabyte-scale data analysis.
+
+Conclusion
+NGF-IDF provides a superior balance between linguistic depth (via N-Grams) and computational efficiency (via index-based vector representation). It addresses the scalability bottlenecks of traditional TF-IDF methods while enhancing model robustness by capturing critical subword context.
+

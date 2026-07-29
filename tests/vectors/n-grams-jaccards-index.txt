@@ -1,0 +1,46 @@
+N-GRAMS: CONCEPT AND APPLICATION
+
+Definition
+An n-gram is a contiguous sequence of 'n' items from a given sample of text or speech. The items can be characters, words, or other units depending on the specific application.
+
+Mechanism
+The value of 'n' determines the length of the sequence. Common examples include:
+Unigram (n=1): Single words or characters (e.g., "the", "a", "cat").
+Bigram (n=2): Sequences of two adjacent items (e.g., "the cat", "dog jumps").
+Trigram (n=3): Sequences of three adjacent items (e.g., "the quick brown", "jumps over the").
+
+Application Scope
+N-grams are fundamental in Natural Language Processing (NLP) and Information Retrieval (IR). They are used to model the probability of sequences, estimate language usage, reduce sparsity, and measure textual similarity.
+
+Limitations
+The count of n-grams can grow exponentially with 'n' and text length, leading to data sparsity issues where many potential combinations have never been observed in the training corpus.
+
+JACCARD'S INDEX (SIMILARITY MEASURE)
+
+Definition
+Jaccard's Index (or Jaccard Similarity Coefficient) is a statistic used for gauging the similarity between two finite sets, denoted as A and B. It measures the ratio of the size of the intersection of those two sets to the size of their union.
+
+Formula
+J(A, B) = |A intersect B| / |A union B|
+
+Where:
+|A intersect B| represents the number of elements common to both set A and set B (the overlap).
+|A union B| represents the total number of unique elements present in either set A or set B.
+
+Interpretation
+The resulting value is a floating-point number between 0 and 1.
+J = 1: The sets are identical (perfect similarity).
+J = 0: The sets have no elements in common (no similarity).
+
+Application with N-Grams
+When applied to text, both Set A and Set B are typically composed of the unique n-grams extracted from two different documents or texts.
+
+Procedure Steps
+1. Define the chosen 'n' (e.g., bigrams).
+2. Extract all unique n-gram units from Document A, forming Set A.
+3. Extract all unique n-gram units from Document B, forming Set B.
+4. Calculate J(A, B) using the intersection and union of these two sets of n-grams.
+
+Use Case Significance
+Jaccard's Index provides a computationally simple yet effective measure of set similarity, making it robust for quantifying textual overlap, deduplication checks, and determining cosine-like distance when applied to discrete units like n-grams.
+

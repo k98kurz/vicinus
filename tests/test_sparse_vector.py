@@ -1,0 +1,69 @@
+from typing import Iterator, ItemsView, ValuesView
+from vicinus import SparseVector
+import unittest
+
+
+class TestSparseVector(unittest.TestCase):
+    def test_SparseVector_raises_TypeError_for_invalid_input(self):
+        vec = SparseVector()
+        with self.assertRaises(TypeError):
+            vec['a'] = 1
+        with self.assertRaises(TypeError):
+            vec[1] = 'a'
+        with self.assertRaises(TypeError):
+            vec[1.012] = 1
+
+    def test_SparseVector_can_have_int_or_float_values(self):
+        vec = SparseVector()
+        vec[1] = 1
+        vec[2] = 2.2
+        assert vec[1] == 1
+        assert vec[2] == 2.2
+
+    def test_SparseVector_len(self):
+        vec = SparseVector()
+        assert len(vec) == 0
+        for i in range(100):
+            vec[i] = i
+            assert len(vec) == i+1
+
+    def test_SparseVector_iter_provides_keys(self):
+        vec = SparseVector({i: i*10 for i in range(1, 10)})
+        for k in vec:
+            assert k // 10 == 0, k
+            assert k in vec.keys()
+
+    def test_SparseVector_keys_values_items(self):
+        vec = SparseVector({i: i*10 for i in range(1, 10)})
+        assert isinstance(vec.keys(), set), type(vec.keys())
+        assert isinstance(vec.values(), ValuesView), type(vec.keys())
+        assert isinstance(vec.items(), ItemsView), type(vec.keys())
+
+    def test_SparseVector_norm_returns_float(self):
+        vec = SparseVector({i: i*10 for i in range(1, 10)})
+        assert type(vec.norm()) is float, vec.norm()
+
+    def test_SparseVector_dot_product_returns_float(self):
+        vec = SparseVector({i: i/10 for i in range(1, 10)})
+        dp = vec.dot_product(vec)
+        assert type(dp) is float, dp
+
+    def test_SparseVector_cosine_similarity_returns_float(self):
+        vec = SparseVector({i: i/10 for i in range(1, 10)})
+        cs = vec.cosine_similarity(vec)
+        assert type(cs) is float, cs
+
+    def test_SparseVector_cosine_similarity_returns_1_for_same(self):
+        vec = SparseVector({i: i/10 for i in range(1, 10)})
+        cs = vec.cosine_similarity(vec)
+        assert cs >= 0.99999, cs
+
+    def test_SparseVector_cosine_similarity_returns_neg1_for_opposite(self):
+        vec1 = SparseVector({0: 1, 1: 0})
+        vec2 = SparseVector({0: -1, 1: 0})
+        cs = vec1.cosine_similarity(vec2)
+        assert cs <= -0.99999, cs
+
+
+if __name__ == '__main__':
+    unittest.main()

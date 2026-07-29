@@ -1,0 +1,63 @@
+TF-IDF AND COSINE SIMILARITY REFERENCE GUIDE
+
+OVERVIEW
+
+This document provides a technical reference for understanding how TF-IDF scores are calculated and how the resulting term vectors are compared using cosine similarity. These methods are fundamental components of many Natural Language Processing (NLP) tasks, particularly text classification, search ranking, and semantic similarity detection. The core goal is to quantify the importance of words within a specific document relative to a larger corpus.
+
+TF-IDF calculates weighting; Cosine Similarity measures vector distance.
+
+TERMINOLOGY AND CONCEPTS
+
+CORPUS
+The complete set of documents or texts against which analysis is performed. All calculations reference this pool.
+
+TERM VECTORIZATION
+The process of transforming textual data (words) into numerical vectors that can be processed by algorithms. Each dimension in the vector corresponds to a unique term found across the corpus.
+
+TF-IDF DOCUMENT OVERVIEW
+
+PURPOSE
+To assign weights to terms, ensuring that words frequently used globally but not specific to a document receive low weight, while highly indicative words retain high weight.
+
+FORMULA COMPONENTS
+
+1. TERM FREQUENCY (TF)
+Definition: Measures how often a term appears within a single document. It reflects the importance of a word within its immediate context.
+Calculation Concept: Count(Term in Document D) / Total Words in Document D
+Effect: Raw frequency counts are used, but normalizing by the total number of words prevents excessively long documents from artificially inflating scores for all contained terms.
+
+2. inverse DOCUMENT FREQUENCY (IDF)
+Definition: Measures how unique or rare a term is across the entire corpus. It penalizes common words (like "the," "a," etc.) which appear in many documents, regardless of their frequency within one document.
+Calculation Concept: log(Total number of documents / Number of documents containing Term T + 1)
+Effect: The logarithm function ensures that IDF grows slowly. Terms found in nearly every document result in an IDF score close to zero, effectively minimizing their contribution to the final weight.
+
+THE FINAL TF-IDF SCORE
+The tfidf_score for a term T in a document D is the product of the two components.
+Formula: TF(T, D) * IDF(T)
+Meaning: A high TF-IDF score indicates that the term is frequent within Document D (high TF) AND rare across the entire Corpus (high IDF).
+
+COSINE SIMILARITY OVERVIEW
+
+PURPOSE
+To measure the angle between two non-zero vectors in a multi-dimensional space. Unlike Euclidean distance, cosine similarity measures orientation rather than magnitude, making it ideal for comparing document topics regardless of document length.
+
+CONCEPTUAL BASIS
+Two documents are represented as high-dimensional TF-IDF vectors (V1 and V2). The vectors exist in the same N-dimensional space, where N is the size of the vocabulary.
+
+FORMULA
+Cosine Similarity(V1, V2) = [V1 . V2] / ( ||V1|| * ||V2|| )
+
+COMPONENT EXPLANATIONS
+
+DOT PRODUCT (V1 . V2)
+The sum of the products of corresponding components in the two vectors. It measures how much the documents share common terms and to what degree those terms contribute equally across both texts.
+
+VECTOR MAGNITUDE (||V||)
+This is the Euclidean length (L2 norm) of a vector, calculated as the square root of the sum of all squared components. Dividing by the magnitudes ensures that differences in document length do not skew the similarity score.
+
+INTERPRETATION OF RESULTS
+Range: The resulting value always falls between -1 and 1.
+Value = 1: Perfect match (the vectors point in the exact same direction, implying identical relative term usage).
+Value = 0: No correlation (the documents share no common terms or their weighted contributions cancel out).
+Value = -1: Complete opposition (rarely encountered in standard text analysis, but indicates maximally opposing vector components).
+

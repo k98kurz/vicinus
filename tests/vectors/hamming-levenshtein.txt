@@ -1,0 +1,50 @@
+Hamming Distance and Levenshtein Distance Reference Guide
+
+Objective: Measure the dissimilarity between two strings (or sequences).
+
+I. Hamming Distance
+
+Definition: Measures the minimum number of substitutions required to change one string into another, assuming the strings are of equal length and maintain order. It counts mismatches at corresponding positions.
+
+Formula (Unnormalized): D(A, B) = sum([1 if A[i] != B[i] else 0] for all i in min(len(A), len(B))). Note: The provided implementation accounts for length differences by padding the shorter string with differing characters conceptually, effectively counting insertions/deletions.
+
+Implementation Notes (hamming_distance):
+- Input Constraint: Works efficiently on strings of potentially different lengths due to internal handling of mismatched ends.
+- Output Types: Integer (unnormalized distance) or Float (normalized distance).
+- Normalization Method: When normalize=True, the distance is divided by max(len(str1), len(str2)).
+
+II. Levenshtein Distance
+
+Definition: Measures the minimum number of single-character edits required to change one word into another. Edits include insertions, deletions, and substitutions (Levenshtein operations). It is more robust than Hamming distance as it accounts for length differences inherently.
+
+Formula (Conceptual): Uses Dynamic Programming based on three core operations:
+1. Deletion: Cost of transforming A by deleting a character.
+2. Insertion: Cost of transforming B by inserting a character.
+3. Substitution/Match: Cost of changing one character to another.
+
+Implementation Notes (levenshtein_distance):
+- Input Constraint: Handles strings of any length. Recursive implementation with memoization (@lru_cache) is used for optimization.
+- Output Types: Integer (unnormalized distance) or Float (normalized distance).
+- Normalization Method: When normalize=True, the distance is divided by max(len(str1), len(str2)), clamped to a maximum of 1.0.
+
+III. Similarity Metric Conversions
+
+Concept: A normalized difference metric (D_norm) ranging from 0 (identical) to 1 (maximally different). The corresponding similarity score (S) is calculated as S = 1 - D_norm.
+
+A. Hamming Similarity
+Function: hamming_similarity(str1, str2)
+Calculation: 1.0 - hamming_distance(str1, str2, True)
+Range: [0.0, 1.0]. (1.0 indicates perfect match; 0.0 indicates maximum difference).
+
+B. Levenshtein Similarity
+Function: levenshtein_similarity(a, b)
+Calculation: 1.0 - levenshtein_distance(a, b, True)
+Range: [0.0, 1.0]. (1.0 indicates perfect match; 0.0 indicates maximum difference).
+
+Summary Table
+
+| Metric | Measures | Primary Operations | Similarity Formula |
+| :--- | :--- | :--- | :--- |
+| Hamming Distance | Character mismatches and length differences | Substitution (fixed-length) | S = 1 - D_norm |
+| Levenshtein Distance | Edits required to transform string A to B | Insertion, Deletion, Substitution | S = 1 - D_norm |
+

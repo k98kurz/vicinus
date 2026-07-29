@@ -1,0 +1,36 @@
+AGENTIC AI SYSTEMS: A TECHNICAL REFERENCE GUIDE
+
+I. CORE TERMINOLOGY AND ARCHITECTURE
+
+The term "agentic" refers to an Artificial Intelligence system designed not just to answer questions, but to independently plan, execute, and iterate across multiple steps towards a defined goal within a complex environment.
+
+Harness (Agent Framework):
+A scaffolding or operating layer that governs the agent's execution flow. It manages state tracking, tool calling orchestration, memory interaction, and error handling. The LLM operates *within* this harness, which provides structure and constraint. Examples include LangChain, AutoGen, etc.
+
+Multi-Turn Interaction:
+The ability of an agent system to maintain context and coherence across multiple conversational or processing cycles. Unlike single-query chatbots, a multi-turn agent remembers past actions, intermediate results, and user intent shifts throughout the entire process.
+
+Tool/Microcontroller Protocols (MCP):
+Tools are external functions or APIs that grant the LLM access to specific operational capabilities outside of its text generation space (e.g., searching a database, calling a weather API, running code). MCP refers broadly to the standardized protocols and structures used for defining how an LLM requests the use of these tools reliably (e.g., JSON schema definitions required for function calls).
+
+II. OPTIMAL LLM CAPABILITIES FOR AGENTIC SYSTEMS
+
+To pair with a harness and create an effective autonomous system, the foundational Large Language Model (LLM) must possess specific cognitive abilities beyond mere text generation:
+
+1. Planning and Decomposition: The ability to take a high-level goal ("Book a flight and prepare a report") and systematically break it down into discrete, executable steps ("Search flights," "Select dates," "Call API," "Draft itinerary").
+2. Self-Correction/Reflection: Identifying when an executed step has failed or yielded insufficient data, and then formulating a corrective plan (e.g., recognizing that the first search query was too narrow and adjusting it).
+3. State Management Integration: The LLM must be proficient at interpreting external state changes passed back by the harness (e.g., receiving a structured error message from an API and understanding what it means for the overall goal).
+4. Robust Reasoning Under Uncertainty: Handling ambiguous prompts or incomplete data inputs without crashing, prompting instead for necessary clarification or making justified assumptions.
+
+III. THEORETICAL ISSUES OF LOCAL VS. LARGE MODELS
+
+The choice between massive cloud-based foundational models (Large Models) and smaller, efficient local models presents significant trade-offs impacting deployment complexity, cost, and capability ceiling.
+
+Challenges of Small/Local Models:
+The primary theoretical issue is the inherent difficulty in maintaining deep, generalized reasoning capacity. Smaller models may struggle with complex zero-shot tasks or multi-step planning that requires abstract conceptual leaps. They are more prone to "capability collapse" when tasked with objectives significantly outside their training distribution compared to much larger models.
+
+Potential Benefits of Small/Local Models:
+1. Confidentiality and Privacy: Running models locally eliminates transmitting sensitive data to external APIs, critical for regulated industries (healthcare, finance).
+2. Reliability and Latency: Independence from cloud infrastructure guarantees consistent performance and dramatically reduces API-call latency, enabling true real-time interaction crucial for embedded or edge devices.
+3. Customization and Fine-Tuning Efficiency: Smaller models are significantly cheaper and faster to fine-tune on proprietary data, allowing them to specialize deeply within a narrow operational domain (e.g., only legal contract analysis), potentially exceeding the performance of generalist massive models in that specific niche.
+

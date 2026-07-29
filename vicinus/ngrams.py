@@ -2,7 +2,7 @@ from vicinus.errors import type_assert, value_assert
 from vicinus.tokenize import tokenize
 
 
-def jaccard_index(a: set, b: set) -> float:
+def jaccard_index(a: set[str], b: set[str]) -> float:
     """Calculate the Jaccard similarity index between two sets, e.g. of
         N-Grams. Defined as the cardinality of the intersection divided
         by the cardinality of the union.

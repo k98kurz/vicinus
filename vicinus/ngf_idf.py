@@ -74,6 +74,7 @@ def ngf_select(
     ranks = ngf_rank(query, text_vecs, ng_size)
     return select(ranks, k)
 
+
 def ngf_idf_setup(
         corpus: list[str], ng_size: int = 3
     ) -> tuple[SparseVector, list[SparseVector]]:
