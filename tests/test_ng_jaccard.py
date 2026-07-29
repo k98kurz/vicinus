@@ -15,7 +15,7 @@ class TestNGJaccard(unittest.TestCase):
         assert type(ngs) is set, type(ngs)
         assert all([len(n) == 3 for n in ngs]), ngs
 
-        ngs = n_grams(self.docdb.get(0).text, size=2)
+        ngs = n_grams(self.docdb.get(0).text, N=2)
         assert type(ngs) is set, type(ngs)
         assert all([len(n) == 2 for n in ngs]), ngs
 

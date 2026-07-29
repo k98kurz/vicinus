@@ -132,8 +132,8 @@ class TestNGFIDF(unittest.TestCase):
 
     def test_ngf_idf_rank_scores_decrease_and_become_more_accurate_with_n_gram_size(self):
         corpus = [d.text for d in self.docdb.docs]
-        idf1, vecs1 = ngf_idf_setup(corpus, ng_size=2)
-        idf2, vecs2 = ngf_idf_setup(corpus, ng_size=5)
+        idf1, vecs1 = ngf_idf_setup(corpus, N=2)
+        idf2, vecs2 = ngf_idf_setup(corpus, N=5)
         query = "spiritual disease psychic illness"
         rankings1 = ngf_idf_rank(query, idf1, vecs1, 2)
         rankings2 = ngf_idf_rank(query, idf2, vecs2, 5)

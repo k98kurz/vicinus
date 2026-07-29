@@ -10,14 +10,14 @@ def jaccard_index(a: set[str], b: set[str]) -> float:
     usize = len(a.union(b))
     return len(a.intersection(b)) / usize if usize else 1.0
 
-def n_grams(text: str, size: int = 3) -> set[str]:
+def n_grams(text: str, N: int = 3) -> set[str]:
     """Extract the N-Grams of a text, defined as the set of unique
-        substrings of the given size.
+        substrings of the given N.
     """
-    type_assert(type(size) is int, 'size must be int')
-    value_assert(size > 0, 'size must be positive')
+    type_assert(type(N) is int, 'N must be int')
+    value_assert(N > 0, 'N must be positive')
     ng = set()
     text = ''.join(tokenize(text))
-    for i in range(len(text)-size+1):
-        ng.add(text[i:i+size])
+    for i in range(len(text)-N+1):
+        ng.add(text[i:i+N])
     return ng

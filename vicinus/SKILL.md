@@ -48,8 +48,8 @@ Arabic numerals) are supported.
 ```python
 from vicinus import n_grams, jaccard_index
 
-ng1 = n_grams(text1, size=3) # default size
-ng2 = n_grams(text2, size=3)
+ng1 = n_grams(text1, N=3) # default N
+ng2 = n_grams(text2, N=3)
 similarity = jaccard_index(ng1, ng2) # between 0 and 1.0
 ```
 
@@ -85,12 +85,12 @@ corpus requires rerunning setup on the whole corpus.
 from vicinus import ngf_idf_setup, ngf_idf_rank, ngf_idf_select
 
 corpus = ["Text 1 is some text...", "Text 2 is another thing...", ...]
-corpus_idf, vecs = ngf_idf_setup(corpus, ng_size=3) # default ng_size
+corpus_idf, vecs = ngf_idf_setup(corpus, N=3) # default N
 query = "text about something"
 # to sort all texts by cosine similarity
-all_ranked = ngf_idf_rank(query, corpus_idf, vecs, ng_size=3) # default ng_size
+all_ranked = ngf_idf_rank(query, corpus_idf, vecs, N=3) # default N
 # or select the top k=2
-candidates = ngf_idf_select(query, corpus_idf, vecs, 2, ng_size=3)
+candidates = ngf_idf_select(query, corpus_idf, vecs, 2, N=3)
 ```
 
 Return values from `ngf_idf_rank` and `ngf_idf_select` have form
@@ -130,7 +130,7 @@ The library exposes a `SparseVector` class which has the following methods:
 
 The library exposes some additional functions that may be useful for experimentation.
 - `tokenize(text: str) -> list[str]`: split, lowercase, strip non-alnum
-- `ng_count(text: str, size: int=3, ngs: str[str]=None) -> SparseVector`
+- `ng_count(text: str, N: int=3, ngs: str[str]=None) -> SparseVector`
 - `ngf_index(ng: str) -> int`: calculate the NGF vec index for a given alnum N-Gram
-- `ngf_idf_query(query: str, corpus_idf: SparseVector, ng_size: int=3) -> SparseVector`:
+- `ngf_idf_query(query: str, corpus_idf: SparseVector, N: int=3) -> SparseVector`:
   proceses a query into an NGF-IDF vector; used by `ngf_idf_rank` and `ngf_idf_select`
