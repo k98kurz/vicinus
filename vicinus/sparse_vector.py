@@ -4,7 +4,12 @@ from vicinus.errors import type_assert
 
 
 class SparseVector:
+    """Class representing a sparse vector, i.e. omitting every element
+        that equals 0. Useful for high dimensionality vectors with
+        mostly 0s.
+    """
     def __init__(self, data: dict[int, int|float] = None):
+        """Initialize. Raises `TypeError` for invalid data."""
         data = data or {}
         self._data = {}
         for k,v in data.items():
@@ -33,16 +38,20 @@ class SparseVector:
         return f"SparseVector{repr(self._data)}"
 
     def get(self, index: int, default = 0) -> int|float|None:
+        """Get the element at the specified index."""
         type_assert(isinstance(index, int), 'index must be int')
         return self._data.get(index, default)
 
     def keys(self) -> set[int]:
+        """Return the set of indices for which elements exist."""
         return set(self._data.keys())
 
     def values(self) -> ValuesView[int|float]:
+        """Return a view of all elements."""
         return self._data.values()
 
     def items(self) -> ItemsView[tuple[int, int|float]]:
+        """Return an ItemsView for `for i, e in vec.items()` syntax."""
         return self._data.items()
 
     def norm(self) -> float:

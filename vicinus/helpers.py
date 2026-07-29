@@ -5,6 +5,10 @@ from vicinus.errors import type_assert, value_assert
 def rank(
         score_fn: Callable, candidates: list
     ) -> list[tuple[float, int]]:
+    """Ranks `candidates` using the `score_fn` callable. Returns a list
+        of tuples in form `(score: float, index: int)`, sorted by score
+        descending.
+    """
     ranks = []
     for i in range(len(candidates)):
         ranks.append((score_fn(candidates[i]), i))
