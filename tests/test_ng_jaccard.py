@@ -1,6 +1,6 @@
 from fixture import DocDB
 from vicinus import (
-    n_grams, jaccard_index
+    n_grams, jaccard_index, rank,
 )
 import unittest
 
@@ -36,6 +36,32 @@ class TestNGJaccard(unittest.TestCase):
         assert type(ji01) is float, type(ji01)
         # should be less than 100% similar
         assert 0.0 <= ji01 < 1.0, ji01
+
+    def test_higher_N_improves_jaccard_index_accuracy(self):
+        query = "spiritual disease illness"
+        ngs2 = [n_grams(d.text, N=2) for d in self.docdb.docs]
+        qng2 = n_grams(query, N=2)
+        r2 = rank(lambda ng: jaccard_index(qng2, ng), ngs2)
+        d2 = [self.docdb.get(r[1]).title for r in r2[:2]]
+        has_spirits = 'spirits-cause-disease.txt' in d2
+        has_cold_flu = 'common-cold-vs-flu.txt' in d2
+        assert not (has_spirits and has_cold_flu)
+
+        ngs3 = [n_grams(d.text, N=3) for d in self.docdb.docs]
+        qng3 = n_grams(query, N=3)
+        r3 = rank(lambda ng: jaccard_index(qng3, ng), ngs3)
+        d3 = [self.docdb.get(r[1]).title for r in r3[:2]]
+        has_spirits = 'spirits-cause-disease.txt' in d3
+        has_cold_flu = 'common-cold-vs-flu.txt' in d3
+        assert not (has_spirits and has_cold_flu)
+
+        ngs5 = [n_grams(d.text, N=5) for d in self.docdb.docs]
+        qng5 = n_grams(query, N=5)
+        r5 = rank(lambda ng: jaccard_index(qng5, ng), ngs5)
+        d5 = [self.docdb.get(r[1]).title for r in r5[:2]]
+        has_spirits = 'spirits-cause-disease.txt' in d5
+        has_cold_flu = 'common-cold-vs-flu.txt' in d5
+        assert has_spirits and has_cold_flu
 
 
 if __name__ == '__main__':

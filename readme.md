@@ -4,19 +4,26 @@ Vicinus is a library for building fuzzy search tools. It includes multiple
 similarity/distance algorithms, an in-memory vector DB, and an optional
 persistent vector DB using my sqloquent ORM package (sqlite3). Made from
 all-organic, artisanal, 100% hand-crafted code with no gen AI (except to write
-some tests) and no external dependencies.
+some text test vectors) and no external dependencies.
+
+This library includes several standard algorithms as well as a few novel (to my
+knowledge) constructions: NGF and NGF-IDF, adapted from TF and TF-IDF but using
+N-Grams to construct a comprehensive lexicon (26 letters + 10 numerals). The goal
+of these novel constructions is to provide a lightweight alternative to text
+embedding models and full TF-IDF while preserving utility for fuzzy searching.
 
 ("Vicinus" means "neighboring/nearby" in Latin.)
 
 ## Status
 
-- [x] Hamming Distance
-- [x] Levenshtein Distance
+- [x] Hamming Distance/Similarity
+- [x] Levenshtein Distance/Similarity
 - [x] N-Gram Extraction
 - [x] Jaccard Index
 - [x] Sparse Vector Cosine Similarity
 - [x] NGF (N-Gram Frequency)
-- [x] NGF-IDF
+- [x] NGF-IDF (N-Gram Frequency * Inverse Document Frequecy)
+- [ ] Planned Optimizations: Levenshtein, NGF-IDF
 - [ ] In-Memory VectorDB using NGF or NGF-IDF
 - [ ] Persistent VectorDB using NGF or NGF-IDF
 
@@ -116,15 +123,15 @@ Latin lowercase + Arabic numerals) are supported.
 from vicinus import n_grams, jaccard_index
 
 # calculate similarity
-ng1 = n_grams(text1, size=3) # default size
-ng2 = n_grams(text2, size=3)
+ng1 = n_grams(text1, N=3) # default N
+ng2 = n_grams(text2, N=3)
 similarity = jaccard_index(ng1, ng2) # between 0 and 1.0
 
 # rank by similarity
 corpus = [text1, text2, ...]
 query = "something"
 corpus_ngrams = [n_grams(t) for t in corpus]
-query_ngrams = ngrams(query)
+query_ngrams = n_grams(query)
 # rank all by query similarity
 rankings = rank(lambda t: jaccard_index(query_ngrams, t), corpus_ngrams)
 # get top k=2 rankings
@@ -167,7 +174,34 @@ all_ranked = ngf_idf_rank(query, corpus_idf, vecs)
 candidates = ngf_idf_select(query, corpus_idf, vecs)
 ```
 
-### Testing
+Note: N=5 resulted in far more accurate rankings for the test vectors than the
+default N=3 for Jaccard Index, NGF, and NGF-IDF. This may require some tuning.
+Higher `N` values lead to sparser vectors and lower cosine similarity/Jaccard
+Index scores, but this appears to be primarily a culling of noise.
+
+## Note on Generative AI Use
+
+All code was written by hand, including the test suite. I used mistral and
+gemma4:e4b (running on my own machine via ollama with some fun bashfu) to write
+the text test vectors. I also used gemma4:31b via Ollama cloud in OpenCode for
+code review (it caught a few loose ends and documentation issues).
+
+The inspiration for this library came during development of a yet unreleased new
+agentic harness system that I intend to optimize for small, local models: as I
+drafted a spec for a `tool_search` tool as an option to avoid context bloat, I
+initially thought to copy a Hamming distance implementation I wrote a few months
+ago in a different project for fuzzy search. I reviewed the draft spec with
+gemma4:e4b, and it suggested I look at Levenshtein distance and Jaccard Index.
+I then read some formulas on Wikipedia, implemented Levenshtein distance, N-grams,
+and Jaccard index, and then derived the concept of NGF/NGF-IDF independently while
+reflecting upon the code I had just written and the inherent difficulties with
+TF/TF-IDF (i.e. the need to construct an indexed lexicon or use a text embedding
+model).
+
+Code projects like this are too fun to give to clankers. Gotta maintain some joy
+in life.
+
+## Testing
 
 First, clone the repo, set up a virtual env, and install requirements from
 requirements.txt. Then run the following command to run the test suite.
@@ -176,6 +210,9 @@ requirements.txt. Then run the following command to run the test suite.
 pip install -e . # or use uv
 python -m unittest -s discover tests
 ```
+
+There are currently 38 tests covering all functionality except the CLI, which is
+tested manually.
 
 ## Contributing
 

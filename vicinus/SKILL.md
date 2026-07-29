@@ -1,15 +1,25 @@
 ---
 name: vicinus
-description: Guide for using the Vicinus library for fuzzy search.
+description: Guide for using the Vicinus library for fuzzy search/document similarity algorithms. Trigger when user asks about N-Grams, Jaccard Index, TF-IDF, Hamming, Levenshtein, fuzzy search, text comparison, or cosine similarity.
 metadata:
   version: 0.0.1
-  last-updated: 2026-07-28
+  last-updated: 2026-07-29
   author: "Jonathan Voss"
   library-name: "vicinus"
   repository: "https://github.com/k98kurz/vicinus"
 ---
 
 # Vicinus
+
+## General Advice
+
+- Comparing short texts robustly, e.g. autocomplete: use Levenshtein or N-Grams + Jaccard Index w/ defaults
+- Comparing short texts cheaply when prefix differences are not expected: use Hamming
+- Comparing/searching larger texts: use Jaccard Index, NGF, or NGF-IDF with N>3
+- Increase N with size of texts to improve signal-to-noise ratio
+- Jaccard Index is less computationally intensive but less precise than NGF/NGF-IDF
+- NGF-IDF requires recomputing vectors for whole corpus when a new text is added
+- NGF does not require recomputing vectors for the whole corpus when a new text is added, but it loses some precision compared to NGF-IDF
 
 ## Hamming Distance/Similarity
 
@@ -19,38 +29,40 @@ which can be normalized into a similarity metric. It is the least robust.
 ```python
 from vicinus import hamming_distance, hamming_similarity
 
-distance = hamming_distance(text1, text2)
-similarity = hamming_similarity(text1, text)
+distance = hamming_distance(text1, text2) # int >= 0
+normalized = hamming_distance(text1, text2, True) # float 0.0-1.0
+similarity = hamming_similarity(text1, text2) # float 0.0-1.0
 ```
 
 ## Levenshtein Distance/Similarity
 
 Levenshtein Distance is more robust than Hamming, but it is more computationally
-costly (recursive) Performance was improved by using memoization on the function,
+costly (recursive). Performance was improved by using memoization on the function,
 but the `lru_cache` was limited in size to prevent memory explosion. Should not be
 used for large texts.
 
 ```python
 from vicinus import levenshtein_distance, levenshtein_similarity
 
-distance = levenshtein_distance(text1, text2)
-similarity = levenshtein_similarity(text1, text)
+distance = levenshtein_distance(text1, text2) # int >= 0
+normalized = levenshtein_distance(text1, text2, True) # float 0.0-1.0
+similarity = levenshtein_similarity(text1, text2) # float 0.0-1.0
 ```
 
 ## N-Grams + Jaccard Index
 
 Another option which scales better than Levenshtein for large texts. N-Grams should
-be at least 3 long (trigrams) but can be made longer for larger texts. Jaccard Index
-is a measure of similarity based upon set inclusion of N-Grams: shared/total
-(|intersection| / |union|). Only aphanumeric chars (standard Latin lowercase +
-Arabic numerals) are supported.
+be at least 3 long (trigrams, the default N value) but can be made longer for
+larger texts. Jaccard Index is a measure of similarity based upon set inclusion of
+N-Grams: shared/total. Only aphanumeric chars (standard Latin lowercase + Arabic
+numerals) are supported.
 
 ```python
 from vicinus import n_grams, jaccard_index
 
-ng1 = n_grams(text1, N=3) # default N
-ng2 = n_grams(text2, N=3)
-similarity = jaccard_index(ng1, ng2) # between 0 and 1.0
+ng1 = n_grams(text1) # set[str]
+ng2 = n_grams(text2)
+similarity = jaccard_index(ng1, ng2) # float 0.0-1.0
 ```
 
 ## NGF (Cosine Similarity)
@@ -109,6 +121,29 @@ query = "something"
 rankings = rank(lambda t: hamming_similarity(query, t), texts)
 candidates = select(rankings, 2)
 ```
+
+## Gotchas
+
+### Levenshtein Recursion
+
+The current implementation of the `levenshtein_distance` function uses recursion.
+Using with long texts will result in `RecursionError`s.
+
+### `N` Parameter
+
+The `N` parameter must be consistent for the math to work, otherwise different
+`ngf_index` values will be used for SparseVectors and no N-Grams will overlap for
+Jaccard Index. It should be tuned to the content being processed; e.g. `N=5`
+outperforms the default `N=3` for the library's text test vectors but may not
+work well on small texts; `N=5` outperformance was confirmed with Jaccard Index,
+NGF, and NGF-IDF.
+
+### NGF-IDF Vector Recomputation
+
+Whenever a new text is added to the corpus, the whole corpus must be re-processed.
+Future optimizations to the library will include optional support for bypassing the
+N-Gram counting for texts that already have counts, which will significantly improve
+the speed at the cost of storing more data.
 
 ## Advanced Use
 

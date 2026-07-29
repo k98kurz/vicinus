@@ -89,6 +89,7 @@ def ngf_idf_setup(
     type_assert(all([type(t) is str for t in corpus]), 'corpus must be list[str]')
     type_assert(type(N) is int, 'N must be int')
     value_assert(N > 0, 'N must be >0')
+
     # 1: NG counts per text
     ngcs = [ng_count(text, N=N) for text in corpus]
 
@@ -118,7 +119,7 @@ def ngf_idf_setup(
     for i in range(len(corpus)):
         vec = vecs[i]
         ngc = ngcs[i]
-        for k, v in ngc.items():
+        for k in ngc:
             vec[k] *= idf[k]
 
     return (idf, vecs)
