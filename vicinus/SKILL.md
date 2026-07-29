@@ -169,3 +169,14 @@ The library exposes some additional functions that may be useful for experimenta
 - `ngf_index(ng: str) -> int`: calculate the NGF vec index for a given alnum N-Gram
 - `ngf_idf_query(query: str, corpus_idf: SparseVector, N: int=3) -> SparseVector`:
   proceses a query into an NGF-IDF vector; used by `ngf_idf_rank` and `ngf_idf_select`
+- `list_sample_vectors() -> list[str]`: lists bundled text samples
+- `get_sample_vector(name: str) -> str`: returns the content of a named text sample
+
+The CLI also includes a subcommand for exporting bundled sample texts for testing:
+
+```bash
+vicinus samples             # prints all to stdout with filenames
+vicinus samples -l          # prints list of all filenames
+vicinus samples -n name     # prints a specific sample to stdout
+vicinus samples -o path     # exports all files to path/
+```

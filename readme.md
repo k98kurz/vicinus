@@ -4,7 +4,7 @@ Vicinus is a library for building fuzzy search tools. It includes multiple
 similarity/distance algorithms, an in-memory vector DB, and an optional
 persistent vector DB using my sqloquent ORM package (sqlite3). Made from
 all-organic, artisanal, 100% hand-crafted code with no gen AI (except to write
-some text test vectors) and no external dependencies.
+some text samples for testing) and no external dependencies.
 
 This library includes several standard algorithms as well as a few novel (to my
 knowledge) constructions: NGF and NGF-IDF, adapted from TF and TF-IDF but using
@@ -43,9 +43,7 @@ pip install vicinus
 
 This package includes a CLI tool for exporting an agent skill to help clankers
 use this package correctly. (It also serves as decent documentation in general,
-so it might also be worth scanning if you aren't coding with a clanker.) I may
-add more features to this tool, so the skill export functionality is exposed via
-a `skill` subcommand.
+so it might also be worth scanning if you aren't coding with a clanker.)
 
 ```bash
 vicinus skill               # prints to stdout
@@ -55,6 +53,15 @@ vicinus skill --claude      # exports to .claude/skills/vicinus/
 vicinus skill --codex       # exports to .agent/skills/vicinus/
 vicinus skill --cursor      # exports to .cursor/skills/vicinus/
 vicinus skill --opencode    # exports to .opencode/skills/vicinus/
+```
+
+The CLI can also be used to export the bundled text samples for experimentation.
+
+```bash
+vicinus samples             # prints all to stdout with filenames
+vicinus samples -l          # prints list of all filenames
+vicinus samples -n name     # prints a specific sample to stdout
+vicinus samples -o path     # exports all files to path/
 ```
 
 ### Distance/Similarity
@@ -181,10 +188,10 @@ Index scores, but this appears to be primarily a culling of noise.
 
 ## Note on Generative AI Use
 
-All code was written by hand, including the test suite. I used mistral and
-gemma4:e4b (running on my own machine via ollama with some fun bashfu) to write
-the text test vectors. I also used gemma4:31b via Ollama cloud in OpenCode for
-code review (it caught a few loose ends and documentation issues).
+All code and documentation was written by hand, including the test suite. I used
+mistral and gemma4:e4b (running on my own machine via ollama with some fun bashfu)
+to write the text samples for testing. I also used gemma4:31b via Ollama cloud in
+OpenCode for code review (it caught a few loose ends and documentation issues).
 
 The inspiration for this library came during development of a yet unreleased new
 agentic harness system that I intend to optimize for small, local models: as I

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from vicinus import SparseVector
+from vicinus import SparseVector, list_samples, get_sample
 import os
 
 
@@ -14,13 +14,9 @@ class DocDB:
     def __init__(self):
         self._docs = []
 
-        path = 'vectors'
-        if 'tests' not in os.getcwd():
-            path = 'tests/vectors'
-
-        for file in os.listdir(path):
-            with open(f'{path}/{file}', 'r') as f:
-                self._docs.append(Document(title=file, text=f.read()))
+        files = list_samples()
+        for file in files:
+            self._docs.append(Document(title=file, text=get_sample(file)))
 
     @property
     def docs(self) -> list[Document]:

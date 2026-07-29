@@ -1,7 +1,9 @@
+from importlib.resources import files
+from pathlib import Path
+from vicinus.samples import list_sample_vectors, get_sample_vector
 import argparse
 import shutil
-from pathlib import Path
-from importlib.resources import files
+import sys
 
 
 def get_skill_command(mode: str, output_dir: str | None = None) -> None:
@@ -23,6 +25,34 @@ def get_skill_command(mode: str, output_dir: str | None = None) -> None:
     output_path.mkdir(parents=True, exist_ok=True)
     (output_path / 'SKILL.md').write_text(skill_md)
     print(f"Skill copied to {output_path}/SKILL.md")
+
+
+def get_samples_command(mode: str, args) -> None:
+    if mode == 'default':
+        names = list_sample_vectors()
+        for i, n in enumerate(names):
+            print("-" * 5 + f" {n} " + "-" * 5)
+            print(get_sample_vector(n))
+            if i + 1 < len(names):
+                print('-' * 20 + '\n')
+    elif mode == 'list':
+        names = list_sample_vectors()
+        for n in names:
+            print(n)
+    elif mode == 'one':
+        try:
+            print(get_sample_vector(args.name))
+        except:
+            print("Error: could not load specified sample.", file=sys.stderr)
+            exit(1)
+    elif mode == 'custom':
+        output_dir = Path(args.output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        names = list_sample_vectors()
+        for n in names:
+            with open(output_dir/n, "w") as f:
+                f.write(get_sample_vector(n))
+        print(f"Done. Wrote {len(names)} sample files to {output_dir}.")
 
 
 def main() -> None:
@@ -68,14 +98,43 @@ def main() -> None:
         help='Output to .opencode/skills/vicinus'
     )
 
+    # Add samples parser
+    samples_parser = argparse.ArgumentParser(add_help=False)
+    samples_parser.add_argument(
+        '--list', '-l',
+        help='List all bundled sample files',
+        default=None
+    )
+    samples_parser.add_argument(
+        '--name', '-n',
+        help='Get a specific sample by file name',
+        default=None
+    )
+    samples_parser.add_argument(
+        '--output', '-o',
+        help='Output directory (default: print to stdout)',
+        default=None
+    )
+
     # Add subcommands
     subparsers.add_parser(
         'skill',
         parents=[skill_parser],
         help=('skill [--output path|-O path|--agent|--claude|--codex|'
             '--cursor|--opencode]: Output the agent skill to stdout, a custom '
-            'output path, or one of the supported platforms.'),
-        description=f'Output the agent skill'
+            'output path, or one of the supported platforms.'
+        ),
+        description='Output the agent skill'
+    )
+
+    subparsers.add_parser(
+        'samples',
+        parents=[samples_parser],
+        help=('samples [--list|-l]: List bundled samples.\n'
+            'samples [--name name|-n name]: Print a specific sample.\n'
+            'samples [--output path|-o path]: Export all files to a specific path.'
+        ),
+        description="List/export bundled samples"
     )
 
     args = parser.parse_args()
@@ -95,6 +154,15 @@ def main() -> None:
         elif args.output:
             mode = 'custom'
         get_skill_command(mode, args.output)
+    elif args.command == 'samples':
+        mode = 'default'
+        if args.list:
+            mode = 'list'
+        elif args.name:
+            mode = 'one'
+        elif args.output:
+            mode = 'custom'
+        get_samples_command(mode, args)
     else:
         parser.print_help()
 
