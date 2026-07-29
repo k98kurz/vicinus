@@ -1,6 +1,7 @@
 from importlib.resources import files
 from pathlib import Path
-from vicinus.samples import list_sample_vectors, get_sample_vector
+from vicinus.samples import list_samples, get_sample
+from vicinus.version import version
 import argparse
 import shutil
 import sys
@@ -29,29 +30,29 @@ def get_skill_command(mode: str, output_dir: str | None = None) -> None:
 
 def get_samples_command(mode: str, args) -> None:
     if mode == 'default':
-        names = list_sample_vectors()
+        names = list_samples()
         for i, n in enumerate(names):
             print("-" * 5 + f" {n} " + "-" * 5)
-            print(get_sample_vector(n))
+            print(get_sample(n))
             if i + 1 < len(names):
                 print('-' * 20 + '\n')
     elif mode == 'list':
-        names = list_sample_vectors()
+        names = list_samples()
         for n in names:
             print(n)
     elif mode == 'one':
         try:
-            print(get_sample_vector(args.name))
+            print(get_sample(args.name))
         except:
             print("Error: could not load specified sample.", file=sys.stderr)
             exit(1)
     elif mode == 'custom':
         output_dir = Path(args.output)
         output_dir.mkdir(parents=True, exist_ok=True)
-        names = list_sample_vectors()
+        names = list_samples()
         for n in names:
             with open(output_dir/n, "w") as f:
-                f.write(get_sample_vector(n))
+                f.write(get_sample(n))
         print(f"Done. Wrote {len(names)} sample files to {output_dir}.")
 
 
@@ -102,6 +103,7 @@ def main() -> None:
     samples_parser = argparse.ArgumentParser(add_help=False)
     samples_parser.add_argument(
         '--list', '-l',
+        action='store_true',
         help='List all bundled sample files',
         default=None
     )
@@ -137,6 +139,12 @@ def main() -> None:
         description="List/export bundled samples"
     )
 
+    subparsers.add_parser(
+        'version',
+        help=('version: Print the current package version.'),
+        description="Print the current package version."
+    )
+
     args = parser.parse_args()
 
     if args.command == 'skill':
@@ -163,6 +171,8 @@ def main() -> None:
         elif args.output:
             mode = 'custom'
         get_samples_command(mode, args)
+    elif args.command == 'version':
+        print(version())
     else:
         parser.print_help()
 

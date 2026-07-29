@@ -17,7 +17,7 @@ assignees: k98kurz
 <!-- Below are examples. Overwrite as needed. -->
 
 - readme.md: "Usage"
-- dox.md: "Classes > SparseVector"
+- docs.md: "Classes > SparseVector"
 
 ## Discrepancies from Documentation Encountered
 

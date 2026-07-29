@@ -160,3 +160,7 @@ Returns the list of bundled sample file names.
 Reads and returns the content of the named sample. Raises FileNotFoundError for
 an invalid name.
 
+### `version() -> str:`
+
+Return the current library version.
+

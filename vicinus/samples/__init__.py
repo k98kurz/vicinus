@@ -5,7 +5,11 @@ def list_samples() -> list[str]:
     """Returns the list of bundled sample file names."""
     try:
         directory = resources.files("vicinus").joinpath("samples")
-        return [str(f.name) for f in directory.iterdir() if f.is_file()]
+        return [
+            str(f.name)
+            for f in directory.iterdir()
+            if f.is_file() and f.name[-3:] in ('.md', 'txt')
+        ]
     except FileNotFoundError:
         return []
 

@@ -9,3 +9,4 @@ from vicinus.ngrams import n_grams, jaccard_index
 from vicinus.samples import list_samples, get_sample
 from vicinus.sparse_vector import SparseVector
 from vicinus.tokenize import tokenize
+from vicinus.version import version
