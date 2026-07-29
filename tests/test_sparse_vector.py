@@ -64,6 +64,11 @@ class TestSparseVector(unittest.TestCase):
         cs = vec1.cosine_similarity(vec2)
         assert cs <= -0.99999, cs
 
+    def test_SparseVector_returns_0_for_unset_index(self):
+        vec = SparseVector()
+        assert vec[123] == 0
+        assert vec.get(123) == 0
+
 
 if __name__ == '__main__':
     unittest.main()

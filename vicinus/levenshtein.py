@@ -17,9 +17,9 @@ def levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
     """
     lal, lbl = len(a), len(b)
     if not lbl:
-        return lal if not normalize else 0.5
+        return lal if not normalize else 1.0
     if not lal:
-        return lbl if not normalize else 0.5
+        return lbl if not normalize else 1.0
     if _head(a) == _head(b):
         d = levenshtein_distance(_tail(a), _tail(b))
         return d if not normalize else d / max(lal, lbl)

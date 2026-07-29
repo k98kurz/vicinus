@@ -134,7 +134,7 @@ def ngf_idf_query(
     ngc = ng_count(query, N=N)
 
     # 2: NGF vector
-    vec = ngf(query, vec=ngc)
+    vec = ngf(query, N=N, vec=ngc)
 
     # 3: NGF-IDF
     for k, v in ngc.items():

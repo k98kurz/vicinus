@@ -24,6 +24,8 @@ class TestHammingLev(unittest.TestCase):
             self.docdb.get(0).title, self.docdb.get(1).title, True
         )
         assert type(hd) is float, type(hd)
+        hd = hamming_distance("test", "", True)
+        assert hd == 1.0, hd
 
     def test_hamming_similarity_returns_float_that_is_1_for_same(self):
         hs = hamming_similarity(self.docdb.get(0).title, self.docdb.get(1).title)
@@ -43,6 +45,8 @@ class TestHammingLev(unittest.TestCase):
             self.docdb.get(0).title, self.docdb.get(1).title, True
         )
         assert type(ld) is float, type(ld)
+        ld = levenshtein_distance("test", "", True)
+        assert ld == 1.0, ld
 
     def test_levenshtein_similarity_returns_float_is_1_for_same(self):
         ls = levenshtein_similarity(

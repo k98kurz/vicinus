@@ -10,9 +10,9 @@ class SparseVector:
         for k,v in data.items():
             self[k] = v
 
-    def __getitem__(self, index: int) -> int|float|None:
+    def __getitem__(self, index: int) -> int|float:
         type_assert(isinstance(index, int), 'index must be int')
-        return self._data[index]
+        return self._data.get(index, 0)
 
     def __setitem__(self, index: int, value: int|float) -> None:
         type_assert(type(index) is int, 'index must be int')
@@ -32,7 +32,7 @@ class SparseVector:
     def __repr__(self) -> str:
         return f"SparseVector{repr(self._data)}"
 
-    def get(self, index: int, default = None) -> int|float|None:
+    def get(self, index: int, default = 0) -> int|float|None:
         type_assert(isinstance(index, int), 'index must be int')
         return self._data.get(index, default)
 
