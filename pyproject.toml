@@ -34,12 +34,14 @@ docs = [
 
 [tool.hatch.build.targets.wheel]
 exclude = [
+  "/notes",
   "/tests",
   ".github",
 ]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
+  "/notes",
   "/tests",
   ".github",
 ]
