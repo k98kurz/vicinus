@@ -6,7 +6,7 @@ _head = lambda text: text[0]
 _tail = lambda text: text[1:]
 
 @lru_cache(maxsize=1024)
-def levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
+def old_levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
     """Calculate Levenshtein distance between two strs. If `normalize`
         is `False` (default), distance is returned directly as an int.
         If `normalize` is set to `True`, the distance is normalized to a
@@ -28,6 +28,38 @@ def levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
         levenshtein_distance(a, _tail(b)),
         levenshtein_distance(_tail(a), _tail(b))
     )
+    return d if not normalize else d / max(lal, lbl)
+
+def levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
+    """Calculate Levenshtein distance between two strs. If `normalize`
+        is `False` (default), distance is returned directly as an int.
+        If `normalize` is set to `True`, the distance is normalized to a
+        float proportional to the average length of the strings, clamped
+        to a max of 1.0. Optimized with dynamic programming.
+    """
+    lal, lbl = len(a), len(b)
+    if not lbl:
+        return lal if not normalize else 1.0
+    if not lal:
+        return lbl if not normalize else 1.0
+
+    state = {}
+    for i in range(lal):
+        for j in range(lbl):
+            if i == 0:
+                state[(i, j)] = j
+            elif j == 0:
+                state[(i, j)] = i
+            elif _head(a[i:]) == _head(b[j:]):
+                state[(i, j)] = state[(i-1, j-1)]
+            else:
+                state[(i, j)] = 1 + min(
+                    state[(i-1, j)],
+                    state[(i, j-1)],
+                    state[(i-1, j-1)]
+                )
+
+    d = state[(lal-1, lbl-1)]
     return d if not normalize else d / max(lal, lbl)
 
 def levenshtein_similarity(a: str, b: str) -> float:

@@ -35,10 +35,14 @@ class TestHammingLev(unittest.TestCase):
     def test_levenshtein_distance_returns_int_that_counts_differences(self):
         ld = levenshtein_distance(self.docdb.get(0).title, self.docdb.get(1).title)
         assert type(ld) is int, type(ld)
-        assert levenshtein_distance("hello world", "hxllo world") == 1
-        assert levenshtein_distance("hello world", "hxxlo world") == 2
-        assert levenshtein_distance("hello world", "hxxlo worl") == 3
-        assert levenshtein_distance("hello world", "ello world") == 1
+        d = levenshtein_distance("hello world", "hxllo world")
+        assert d == 1, d
+        d = levenshtein_distance("hello world", "hxxlo world")
+        assert d == 2, d
+        d = levenshtein_distance("hello world", "hxxlo worl")
+        assert d == 3, d
+        d = levenshtein_distance("hello world", "ello world")
+        assert d == 1, d
 
     def test_levenshtein_distance_normalized_returns_float(self):
         ld = levenshtein_distance(

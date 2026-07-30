@@ -1,3 +1,9 @@
+## 0.0.2 (WIP)
+
+- Optimized Levenshtein Distance: converted from recursive function w/ memoization to
+  a nested loop
+
+
 ## 0.0.1
 
 - Initial version:
