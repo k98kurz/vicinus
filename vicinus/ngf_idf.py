@@ -79,11 +79,7 @@ def ngf_select(
 def ngf_idf_setup(
         corpus: dict[Any, str], N: int = 3,
         ng_counts: dict[Any, SparseVector] = None,
-        ngf_vecs: dict[Any, SparseVector] = None,
-    ) -> tuple[
-        SparseVector, dict[Any, SparseVector],
-        dict[Any, SparseVector], dict[Any, SparseVector],
-    ]:
+    ) -> tuple[SparseVector, dict[Any, SparseVector], dict[Any, SparseVector]]:
     """Processes a corpus, creating the vectors for each text in a
         pipeline: 1) extract N-Grams and create NG count vectors; 2)
         aggregate corpus NG count vector; 3) create NGF vectors; 4)
@@ -114,9 +110,8 @@ def ngf_idf_setup(
     })
 
     # 3: NGF vectors
-    ngf_vecs = ngf_vecs or {}
     vecs = {
-        k: ngf_vecs[k].copy() if k in ngf_vecs else ngf(v, N=N, vec=ngcs[k])
+        k: ngf(v, N=N, vec=ngcs[k])
         for k, v in corpus.items()
     }
 
@@ -133,7 +128,7 @@ def ngf_idf_setup(
         for k in ngc:
             vec[k] *= idf[k]
 
-    return (idf, vecs, ngcs, ngf_vecs)
+    return (idf, vecs, ngcs)
 
 
 def ngf_idf_query(
