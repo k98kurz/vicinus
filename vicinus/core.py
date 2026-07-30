@@ -17,6 +17,7 @@ def rank(
     ranks.sort(reverse=True)
     return ranks
 
+
 def select(
         rankings: list[tuple[float, Any]], k: int = 4
     ) -> list[tuple[float, int]]:
@@ -36,3 +37,14 @@ def select(
     value_assert(k > 0, 'k must be int>0')
     rankings = sorted(rankings, reverse=True)
     return rankings[:k]
+
+
+def tokenize(text: str) -> list[str]:
+    """Preprocess some text by casting to lower, removing punctuation,
+        and splitting on word boundaries. Returns only alphanumeric
+        tokens.
+    """
+    return [
+        ''.join(c for c in word if c.isalnum())
+        for word in text.lower().split()
+    ]

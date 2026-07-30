@@ -1,10 +1,9 @@
 from math import log
 from typing import Any
 from vicinus.errors import type_assert, value_assert
-from vicinus.helpers import rank, select
+from vicinus.core import rank, select, tokenize
 from vicinus.ngrams import n_grams
 from vicinus.sparse_vector import SparseVector
-from vicinus.tokenize import tokenize
 
 
 def ngf_index(ng: str) -> int:

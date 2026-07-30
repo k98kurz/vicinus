@@ -1,5 +1,5 @@
+from vicinus.core import tokenize
 from vicinus.errors import type_assert, value_assert
-from vicinus.tokenize import tokenize
 
 
 def jaccard_index(a: set[str], b: set[str]) -> float:
