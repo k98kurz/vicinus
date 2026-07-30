@@ -69,6 +69,13 @@ class TestSparseVector(unittest.TestCase):
         assert vec[123] == 0
         assert vec.get(123) == 0
 
+    def test_SparseVector_copy_returns_copy(self):
+        sp1 = SparseVector({1: 2})
+        sp2 = sp1.copy()
+        assert sp1[1] == sp2[1]
+        sp2[2] = 3
+        assert sp1[2] == 0
+
 
 if __name__ == '__main__':
     unittest.main()

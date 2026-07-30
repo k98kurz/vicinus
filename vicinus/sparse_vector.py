@@ -83,3 +83,6 @@ class SparseVector:
         cs = self.dot_product(other) / n
         # normalize to [-1.0, 1.0] to fix floating point precision issues
         return min(1.0, max(cs, -1.0))
+
+    def copy(self) -> SparseVector:
+        return SparseVector({**self._data})
