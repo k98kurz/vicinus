@@ -5,6 +5,7 @@ from vicinus import (
     ngf_idf_setup, ngf_idf_query, ngf_idf_rank, ngf_idf_select,
     SparseVector,
 )
+import gc
 import unittest
 
 
@@ -84,23 +85,25 @@ class TestNGFIDF(unittest.TestCase):
     def test_ngf_idf_setup_returns_tuple_SparseVector_list_float_SparseVectors(self):
         result = ngf_idf_setup(self.corpus)
         assert type(result) is tuple, type(result)
-        assert len(result) == 3, len(result)
-        idf, vecs, ngcs = result
+        assert len(result) == 4, len(result)
+        idf, vecs, ngcs, ngfv = result
         assert type(idf) is SparseVector, type(idf)
         assert type(vecs) is dict, type(vecs)
         assert all([type(v) is SparseVector for v in vecs.values()])
         assert type(ngcs) is dict, type(ngcs)
         assert all([type(v) is SparseVector for v in ngcs.values()])
+        assert type(ngfv) is dict, type(ngfv)
+        assert all([type(v) is SparseVector for v in ngfv.values()])
 
     def test_ngf_idf_query_returns_float_SparseVector(self):
-        idf, _vecs, _ngcs = ngf_idf_setup(self.corpus)
+        idf, _vecs, _ngcs, _ngfv = ngf_idf_setup(self.corpus)
         query = "spiritual disease psychic illness"
         result = ngf_idf_query(query, idf)
         assert type(result) is SparseVector, type(result)
         assert all([type(v) is float for v in result.values()])
 
     def test_ngf_idf_rank_returns_list_tuple_float_int(self):
-        idf, vecs, _ = ngf_idf_setup(self.corpus)
+        idf, vecs, _, __ = ngf_idf_setup(self.corpus)
         query = "spiritual disease psychic illness"
         rankings = ngf_idf_rank(query, idf, vecs)
         assert type(rankings) is list, type(rankings)
@@ -110,14 +113,14 @@ class TestNGFIDF(unittest.TestCase):
         assert all([type(r[1]) is int for r in rankings]), 'index should be second'
 
     def test_ngf_idf_rank_returns_sorted_by_score_descending(self):
-        idf, vecs, _ = ngf_idf_setup(self.corpus)
+        idf, vecs, _, __ = ngf_idf_setup(self.corpus)
         query = "spiritual disease psychic illness"
         rankings = ngf_idf_rank(query, idf, vecs)
         for i in range(len(rankings)-1):
             assert rankings[i][0] >= rankings[i+1][0]
 
     def test_ngf_idf_select_returns_top_k_of_ngf_rank(self):
-        idf, vecs, _ = ngf_idf_setup(self.corpus)
+        idf, vecs, _, __ = ngf_idf_setup(self.corpus)
         query = "spiritual disease psychic illness"
         k = 3
         rankings = ngf_idf_rank(query, idf, vecs)
@@ -127,8 +130,8 @@ class TestNGFIDF(unittest.TestCase):
         assert select_ids == rank_ids[:k], (rankings, selection)
 
     def test_ngf_idf_rank_scores_decrease_and_become_more_accurate_with_n_gram_size(self):
-        idf1, vecs1, _ = ngf_idf_setup(self.corpus, N=2)
-        idf2, vecs2, _ = ngf_idf_setup(self.corpus, N=5)
+        idf1, vecs1, _, __ = ngf_idf_setup(self.corpus, N=2)
+        idf2, vecs2, _, __ = ngf_idf_setup(self.corpus, N=5)
         query = "spiritual disease psychic illness"
         rankings1 = ngf_idf_rank(query, idf1, vecs1, 2)
         rankings2 = ngf_idf_rank(query, idf2, vecs2, 5)
@@ -148,21 +151,78 @@ class TestNGFIDF(unittest.TestCase):
     def test_ngf_idf_setup_is_faster_when_reusing_ngcounts(self):
         without = []
         for i in range(3):
+            gc.collect()
             start = perf_counter()
-            _i, _v, ngcs = ngf_idf_setup(self.corpus)
+            _i, _v, ngcs, _nv = ngf_idf_setup(self.corpus)
             stop = perf_counter()
             without.append(stop - start)
 
         with_ngcs = []
         for i in range(3):
+            gc.collect()
             start = perf_counter()
-            _i, _v, _n = ngf_idf_setup(self.corpus, ng_counts=ngcs)
+            _i, _v, _n, _nv = ngf_idf_setup(self.corpus, ng_counts=ngcs)
             stop = perf_counter()
             with_ngcs.append(stop - start)
 
         total_without = sum(without)
         total_with = sum(with_ngcs)
-        print(f"{total_without=} {total_with=} speed_up={1-total_with/total_without}")
+        print(
+            f"ngcs: {total_without=} {total_with=} "
+            f"speed_up={1-total_with/total_without}"
+        )
+        assert total_without > total_with, (total_without, total_with)
+
+    def test_ngf_idf_setup_is_faster_when_reusing_ngf_vecs(self):
+        without = []
+        for i in range(3):
+            gc.collect()
+            start = perf_counter()
+            _i, _v, _n, ngfv = ngf_idf_setup(self.corpus)
+            stop = perf_counter()
+            without.append(stop - start)
+
+        with_ngcs = []
+        for i in range(3):
+            gc.collect()
+            start = perf_counter()
+            _i, _v, _n, _nv = ngf_idf_setup(self.corpus, ngf_vecs=ngfv)
+            stop = perf_counter()
+            with_ngcs.append(stop - start)
+
+        total_without = sum(without)
+        total_with = sum(with_ngcs)
+        print(
+            f"ngfv: {total_without=} {total_with=} "
+            f"speed_up={1-total_with/total_without}"
+        )
+        assert total_without > total_with, (total_without, total_with)
+
+    def test_ngf_idf_setup_is_faster_when_reusing_ngcs_and_ngf_vecs(self):
+        without = []
+        for i in range(3):
+            gc.collect()
+            start = perf_counter()
+            _i, _v, ngcs, ngfv = ngf_idf_setup(self.corpus)
+            stop = perf_counter()
+            without.append(stop - start)
+
+        with_ngcs = []
+        for i in range(3):
+            gc.collect()
+            start = perf_counter()
+            _i, _v, _n, _nv = ngf_idf_setup(
+                self.corpus, ng_counts=ngcs, ngf_vecs=ngfv
+            )
+            stop = perf_counter()
+            with_ngcs.append(stop - start)
+
+        total_without = sum(without)
+        total_with = sum(with_ngcs)
+        print(
+            f"ngcs+ngfv: {total_without=} {total_with=} "
+            f"speed_up={1-total_with/total_without}"
+        )
         assert total_without > total_with, (total_without, total_with)
 
 
