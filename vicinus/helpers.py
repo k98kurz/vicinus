@@ -1,23 +1,24 @@
-from typing import Callable
+from typing import Any, Callable
 from vicinus.errors import type_assert, value_assert
 
 
 def rank(
-        score_fn: Callable, candidates: list
-    ) -> list[tuple[float, int]]:
+        score_fn: Callable, candidates: dict
+    ) -> list[tuple[float, Any]]:
     """Ranks `candidates` using the `score_fn` callable. Returns a list
         of tuples in form `(score: float, index: int)`, sorted by score
         descending.
     """
+    type_assert(type(candidates) is dict, 'candidates must be dict')
     ranks = []
-    for i in range(len(candidates)):
-        ranks.append((score_fn(candidates[i]), i))
+    for k, v in candidates.items():
+        ranks.append((score_fn(v), k))
 
     ranks.sort(reverse=True)
     return ranks
 
 def select(
-        rankings: list[tuple[float, int]], k: int = 4
+        rankings: list[tuple[float, Any]], k: int = 4
     ) -> list[tuple[float, int]]:
     """Select the top `k` from the rankings. Sorts beforehand. Assumes
         similarity scores and not distance scores. Raises `TypeError`

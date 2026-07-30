@@ -39,7 +39,7 @@ class TestNGJaccard(unittest.TestCase):
 
     def test_higher_N_improves_jaccard_index_accuracy(self):
         query = "spiritual disease illness"
-        ngs2 = [n_grams(d.text, N=2) for d in self.docdb.docs]
+        ngs2 = {i: n_grams(d.text, N=2) for i, d in enumerate(self.docdb.docs)}
         qng2 = n_grams(query, N=2)
         r2 = rank(lambda ng: jaccard_index(qng2, ng), ngs2)
         d2 = [self.docdb.get(r[1]).title for r in r2[:2]]
@@ -47,7 +47,7 @@ class TestNGJaccard(unittest.TestCase):
         has_cold_flu = 'common-cold-vs-flu.txt' in d2
         assert not (has_spirits and has_cold_flu)
 
-        ngs3 = [n_grams(d.text, N=3) for d in self.docdb.docs]
+        ngs3 = {i: n_grams(d.text, N=3) for i, d in enumerate(self.docdb.docs)}
         qng3 = n_grams(query, N=3)
         r3 = rank(lambda ng: jaccard_index(qng3, ng), ngs3)
         d3 = [self.docdb.get(r[1]).title for r in r3[:2]]
@@ -55,7 +55,7 @@ class TestNGJaccard(unittest.TestCase):
         has_cold_flu = 'common-cold-vs-flu.txt' in d3
         assert not (has_spirits and has_cold_flu)
 
-        ngs5 = [n_grams(d.text, N=5) for d in self.docdb.docs]
+        ngs5 = {i: n_grams(d.text, N=5) for i, d in enumerate(self.docdb.docs)}
         qng5 = n_grams(query, N=5)
         r5 = rank(lambda ng: jaccard_index(qng5, ng), ngs5)
         d5 = [self.docdb.get(r[1]).title for r in r5[:2]]

@@ -14,11 +14,11 @@ class TestCore(unittest.TestCase):
 
     def test_rank_returns_sorted_list_of_tuples(self):
         fn = lambda x: (len(x) + len(self.original))/len(self.original)
-        texts = [
-            "Shortest",
-            "A medium length text",
-            "This is the longest text by far.",
-        ]
+        texts = {
+            0: "Shortest",
+            1: "A medium length text",
+            2: "This is the longest text by far.",
+        }
         rankings = rank(fn, texts)
         assert type(rankings) is list, type(rankings)
         assert all([type(t) is tuple for t in rankings]), [type(t) for t in rankings]
@@ -28,11 +28,11 @@ class TestCore(unittest.TestCase):
 
     def test_select_returns_top_k(self):
         fn = lambda x: (len(x) + len(self.original))/len(self.original)
-        texts = [
-            "Shortest",
-            "A medium length text",
-            "This is the longest text by far.",
-        ]
+        texts = {
+            0: "Shortest",
+            1: "A medium length text",
+            2: "This is the longest text by far.",
+        }
         rankings = rank(fn, texts)
         s1 = select(rankings, 1)
         assert type(s1) is list, type(s1)

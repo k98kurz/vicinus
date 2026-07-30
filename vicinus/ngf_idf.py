@@ -1,4 +1,5 @@
 from math import log
+from typing import Any
 from vicinus.errors import type_assert, value_assert
 from vicinus.helpers import rank, select
 from vicinus.ngrams import n_grams
@@ -76,8 +77,9 @@ def ngf_select(
 
 
 def ngf_idf_setup(
-        corpus: list[str], N: int = 3
-    ) -> tuple[SparseVector, list[SparseVector]]:
+        corpus: dict[Any, str], N: int = 3,
+        ng_counts: dict[Any, SparseVector] = None,
+    ) -> tuple[SparseVector, dict[Any, SparseVector], dict[Any, SparseVector]]:
     """Processes a corpus, creating the vectors for each text in a
         pipeline: 1) extract N-Grams and create NG count vectors; 2)
         aggregate corpus NG count vector; 3) create NGF vectors; 4)
@@ -85,44 +87,48 @@ def ngf_idf_setup(
         by the IDF vector. Returns the corpus IDF vector as well as the
         NGF-IDF vectors to enable fuzzy search on queries.
     """
-    type_assert(type(corpus) is list, 'corpus must be list[str]')
-    type_assert(all([type(t) is str for t in corpus]), 'corpus must be list[str]')
+    type_assert(type(corpus) is dict, 'corpus must be dict[Any, str]')
+    type_assert(all([type(v) is str for v in corpus.values()]),
+        'corpus must be dict[Any, str]')
     type_assert(type(N) is int, 'N must be int')
     value_assert(N > 0, 'N must be >0')
 
     # 1: NG counts per text
-    ngcs = [ng_count(text, N=N) for text in corpus]
+    ng_counts = ng_counts or {}
+    ngcs = {
+        k: ng_counts[k] if k in ng_counts else ng_count(text, N=N)
+        for k, text in corpus.items()
+    }
 
     # 2: aggregate corpus NG count
     indices = set()
-    for ngc in ngcs:
+    for ngc in ngcs.values():
         indices = indices | ngc.keys()
     corpus_counts = SparseVector({
-        i: sum([ngc.get(i, 0) for ngc in ngcs])
+        i: sum([ngc.get(i, 0) for ngc in ngcs.values()])
         for i in indices
     })
 
     # 3: NGF vectors
-    vecs = [
-        ngf(corpus[i], N=N, vec=ngcs[i])
-        for i in range(len(corpus))
-    ]
+    vecs = {
+        k: ngf(v, N=N, vec=ngcs[k])
+        for k, v in corpus.items()
+    }
 
     # 4: IDF
     N = len(corpus) + 1
     idf = SparseVector()
     for i in corpus_counts:
-        n = sum([1 if i in v else 0 for v in vecs]) + 1
+        n = sum([1 if i in v else 0 for v in vecs.values()]) + 1
         idf[i] = log(N / n)
 
     # 5: NGF-IDF
-    for i in range(len(corpus)):
-        vec = vecs[i]
-        ngc = ngcs[i]
+    for k, vec in vecs.items():
+        ngc = ngcs[k]
         for k in ngc:
             vec[k] *= idf[k]
 
-    return (idf, vecs)
+    return (idf, vecs, ngcs)
 
 
 def ngf_idf_query(
@@ -145,19 +151,19 @@ def ngf_idf_query(
 
 
 def ngf_idf_rank(
-        query: str, corpus_idf: SparseVector, text_vecs: list[SparseVector],
-        N: int = 3 
-    ) -> list[tuple[float, int]]:
+        query: str, corpus_idf: SparseVector, text_vecs: dict[Any, SparseVector],
+        N: int = 3
+    ) -> list[tuple[float, Any]]:
     """Runs NGF-IDF cosine similarity between the query and the text
-        vectors. Returns a sorted list of form `[(similarity, index)]`.
+        vectors. Returns a sorted list of form `[(similarity, key)]`.
     """
     qvec = ngf_idf_query(query, corpus_idf, N)
     return rank(qvec.cosine_similarity, text_vecs)
 
 
 def ngf_idf_select(
-        query: str, corpus_idf: SparseVector, text_vecs: list[SparseVector],
-        k: int = 4, N: int = 3 
+        query: str, corpus_idf: SparseVector, text_vecs: dict[Any, SparseVector],
+        k: int = 4, N: int = 3
     ) -> list[tuple[float, int]]:
     """Runs NGF-IDF cosine similarity between the query and the text
         vectors. Returns the top `k` candidates in a sorted list of form
