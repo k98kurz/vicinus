@@ -65,11 +65,11 @@ def ngf_rank(
 
 
 def ngf_select(
-        query: str, text_vecs: list[SparseVector], k: int = 4, N: int = 3
+        query: str, text_vecs: dict[Any, SparseVector], k: int = 4, N: int = 3
     ) -> list[tuple[float, int]]:
     """Runs NGF cosine similarity between the query and the text
         vectors. Returns the top `k` candidates in a sorted list of form
-        `[(similarity, index)]`.
+        `[(similarity, key)]`.
     """
     ranks = ngf_rank(query, text_vecs, N)
     return select(ranks, k)

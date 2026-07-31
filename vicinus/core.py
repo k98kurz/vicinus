@@ -26,13 +26,13 @@ def select(
         or `ValueError` for invalid inputs.
     """
     type_assert(type(rankings) is list,
-        'rankings must be list[tuple[float, int]]')
+        'rankings must be list[tuple[float, Any]]')
     type_assert(all([type(r) is tuple for r in rankings]),
-        'rankings must be list[tuple[float, int]]')
+        'rankings must be list[tuple[float, Any]]')
     value_assert(all([len(r) == 2 for r in rankings]),
-        'rankings must be list[tuple[float, int]]')
-    type_assert(all([type(r[0]) is float and type(r[1]) is int for r in rankings]),
-        'rankings must be list[tuple[float, int]]')
+        'rankings must be list[tuple[float, Any]]')
+    type_assert(all([type(r[0]) is float for r in rankings]),
+        'rankings must be list[tuple[float, Any]]')
     type_assert(type(k) is int, 'k must be int>0')
     value_assert(k > 0, 'k must be int>0')
     rankings = sorted(rankings, reverse=True)
