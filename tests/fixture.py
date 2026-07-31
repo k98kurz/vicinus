@@ -37,6 +37,9 @@ class DocDB:
     def get(self, index: int) -> Document:
         return self._docs[index]
 
+    def find(self, title: str) -> int:
+        return ([d.title for d in self._docs]).index(title)
+
     def select(self, indices: int) -> dict[int, Document]:
         result = {}
         for i in indices:

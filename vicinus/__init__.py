@@ -8,4 +8,5 @@ from vicinus.ngf_idf import (
 from vicinus.ngrams import n_grams, jaccard_index
 from vicinus.samples import list_samples, get_sample
 from vicinus.sparse_vector import SparseVector
+from vicinus.vectordb import VectorDB, VDBMode, IDFMode
 from vicinus.version import version
