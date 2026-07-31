@@ -22,7 +22,10 @@ class SparseVector:
     def __setitem__(self, index: int, value: int|float) -> None:
         type_assert(type(index) is int, 'index must be int')
         type_assert(type(value) in (int, float), 'value must be int|float')
-        self._data[index] = value
+        if value != 0:
+            self._data[index] = value
+        elif index in self._data:
+            del self._data[index]
 
     def __delitem__(self, index: int) -> None:
         type_assert(type(index) is int, 'index must be int')

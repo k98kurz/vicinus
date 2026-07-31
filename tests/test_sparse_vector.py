@@ -24,8 +24,17 @@ class TestSparseVector(unittest.TestCase):
         vec = SparseVector()
         assert len(vec) == 0
         for i in range(100):
-            vec[i] = i
+            vec[i] = i+1
             assert len(vec) == i+1
+
+    def test_SparseVector_setting_to_0_removes_index(self):
+        vec = SparseVector()
+        vec[0] = 1
+        vec[1] = 1
+        assert len(vec) == 2
+        vec[0] = 0
+        vec[1] = 0.0
+        assert len(vec) == 0
 
     def test_SparseVector_iter_provides_keys(self):
         vec = SparseVector({i: i*10 for i in range(1, 10)})
