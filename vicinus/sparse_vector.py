@@ -46,7 +46,7 @@ class SparseVector:
         return self._data.get(index, default)
 
     def keys(self) -> set[int]:
-        """Return the set of indices for which elements exist."""
+        """Return the set of indices at which elements exist."""
         return set(self._data.keys())
 
     def values(self) -> ValuesView[int|float]:
@@ -60,8 +60,7 @@ class SparseVector:
     def norm(self) -> float:
         """Calculate the Euclidean norm of a SparseVector, defined as
             the square root of the dot product of itself (i.e. the sqrt
-            of the sum of the squares of the elements). Raises
-            `TypeError` for invalid input.
+            of the sum of the squares of the elements).
         """
         return self.dot_product(self) ** 0.5
 
@@ -76,8 +75,10 @@ class SparseVector:
         return sum(self[i] * other[i] for i in indices)
 
     def cosine_similarity(self, other: SparseVector) -> float:
-        """Calculate the cosine similarity with another SparseVector.
-            Raises `TypeError`.
+        """Calculate the cosine similarity with another SparseVector,
+            defined as the doc product divided by the product of norms.
+            Returns 0 if the product of norms is zero. Raises
+            `TypeError` for invalid `other`.
         """
         type_assert(isinstance(other, SparseVector), 'other must be SparseVector')
         n = self.norm() * other.norm()
@@ -88,4 +89,5 @@ class SparseVector:
         return min(1.0, max(cs, -1.0))
 
     def copy(self) -> SparseVector:
+        """Return a copy of the `SparseVector`."""
         return SparseVector({**self._data})

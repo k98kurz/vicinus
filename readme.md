@@ -23,9 +23,9 @@ embedding models and full TF-IDF while preserving utility for fuzzy searching.
 - [x] Sparse Vector Cosine Similarity
 - [x] NGF (N-Gram Frequency)
 - [x] NGF-IDF (N-Gram Frequency * Inverse Document Frequecy)
-- [ ] Planned Optimizations: Levenshtein, NGF-IDF
-- [ ] In-Memory VectorDB using NGF or NGF-IDF
-- [ ] Persistent VectorDB using NGF or NGF-IDF
+- [x] Optimizations: Levenshtein, NGF-IDF (reuse intermediate states)
+- [x] In-Memory VectorDB: Jaccard, NGF, NGF-IDF
+- [ ] Persistent VectorDB: Jaccard, NGF, NGF-IDF (sqloquent)
 
 Open issues can be tracked [here](https://github.com/k98kurz/vicinus/issues).
 Historical changes can be found in the
@@ -64,23 +64,71 @@ vicinus samples -n name     # prints a specific sample to stdout
 vicinus samples -o path     # exports all files to path/
 ```
 
+There is also a `vicinus version` subcommand that prints the package version.
+
+### VectorDB
+
+This package includes an in-memory vector database that can use Jaccard Index,
+NGF, or NGF-IDF. NGF-IDF is the most accurate, but it takes significantly longer
+to recalculate vectors due to the IDF component requiring recounting N-Grams
+across the whole corpus and recalculating vectors for each text upon every add/
+update/remove. Jaccard Index is the fastest and least accurate, but it works. NGF
+seems to be a reasonable middle-of-the-road choice with better accuracy without
+sacrificing too much performance, so it is the default.
+
+The `VectorDB` class can be initialized with several options:
+- `N: int`: the size of the N-Gram (default 5)
+- `mode: VDBMode`: one of `VDBMode.JACCARD`, `NGF`, or `NGF_IDF` (default `NGF`)
+- `idf_mode: IDFMode`: one of `IDFMode.SAVE_SPACE` or `IDFMode.SAVE_COUNTS`; valid
+  only for `VDBMode.NGF_IDF` (default `SAVE_SPACE`)
+
+```python
+from vicinus import VectorDB, VDBMode
+
+# setup
+vdb = VectorDB(mode=VDBMode.NGF_IDF)
+vdb.set_corpus({
+    d.title_or_id: d.content
+    for d in documents
+}, recalculate=False) # default recalculate=True
+vdb.add(title_or_id, content, recalculate=False)
+vdb.remove(title_or_id) # recalculate vectors when all are added
+
+# search
+res = vdb.search(query_str, limit=2) # default limit=4; set to -1 to return all
+print(res) # [(float score, title_or_id),...]
+doc = vdb.get(res[0][1]) # (str content, [SparseVector|set[str]])
+```
+
+The second element returned by `VectorDB.get` will be a list with a `SparseVector`
+or `set[str]` as the first element (for NGF/NGF-IDF or Jaccard, respectively) and
+optionally a second `SparseVector` including the N-Gram counts for the record for
+`mode=VDBMode.NGF_IDF` and `idf_mode=IDFMode.SAVE_COUNTS`.
+
+Note that `IDFMode.SAVE_COUNTS` has thus far not shown much performance benefit in
+testing, though the underlying setup mechanism was proven to be faster.
+
 ### Distance/Similarity
 
-There are two distance metrics with corresponding similarity scores Hamming and
-Levenshtein. 
+There are two distance metrics with corresponding similarity scores: Hamming and
+Levenshtein. The computational and memory costs of a single comparison are lower
+with these than going through the setup for the three vectorized mechanisms, but
+repeated searches continually iterate over the same texts.
 
-There are additional similarity scores:
-- N-Grams w/ Jaccard Index: 
+There are vectorized similarity mechanisms:
+- N-Grams w/ Jaccard Index (technically a set, not a vector)
 - NGF w/ Cosine Similarity
 - NGF-IDF w/ Cosine Similarity
 
-There are also two helper functions:
-- `rank(score_fn: Callable, candidates: list) -> list[tuple[float, int]]`
-- `select(rankings: list[tuple[float, int]], k: int = 4) -> list[tuple[float, int]]`
+There are three other functions useful for building fuzzy search tools:
+- `rank(score_fn: Callable, candidates: dict[K, V]) -> list[tuple[float, K]]`
+- `select(rankings: list[tuple[float, K]], k: int = 4) -> list[tuple[float, K]]`
+- `tokenize(text: str) -> list[str]`
 
 #### Hamming
 
-Relatively simple and cheap, but not very robust. Not suitable for large texts.
+Relatively simple and cheap, but does not handle deletions/insertions. Not
+suitable for fuzzy searching through large texts or many texts.
 
 ```python
 from vicinus import hamming_distance, hamming_similarity, rank, select
@@ -89,7 +137,7 @@ from vicinus import hamming_distance, hamming_similarity, rank, select
 distance = hamming_distance(text1, text2)
 
 # rank by similarity
-corpus = [text1, text2, ...]
+corpus = {1: text1, 2: text2, ...}
 query = "something"
 # rank all by query similarity
 rankings = rank(lambda t: hamming_similarity(query, t), corpus)
@@ -99,8 +147,9 @@ candidates = select(rankings, 2)
 
 #### Levenshtein
 
-More complex and robust than Hamming, but entails recursive computation. Optimized
-by a limited `lru_cache(maxsize=1024)`. Not suitable for large texts.
+More complex and robust than Hamming, but entails nested loops (polynomial time)
+and some memory overhead (2x longest string). Not suitable for fuzzy searching
+through large texts or many texts.
 
 ```python
 from vicinus import levenshtein_distance, levenshtein_similarity, rank, select
@@ -109,7 +158,7 @@ from vicinus import levenshtein_distance, levenshtein_similarity, rank, select
 distance = levenshtein_distance(text1, text2)
 
 # rank by similarity
-corpus = [text1, text2, ...]
+corpus = {1: text1, 2: text2, ...}
 query = "something"
 # rank all by query similarity
 rankings = rank(lambda t: levenshtein_similarity(query, t), corpus)
@@ -135,9 +184,9 @@ ng2 = n_grams(text2, N=3)
 similarity = jaccard_index(ng1, ng2) # between 0 and 1.0
 
 # rank by similarity
-corpus = [text1, text2, ...]
+corpus = {1: text1, 2: text2, ...}
 query = "something"
-corpus_ngrams = [n_grams(t) for t in corpus]
+corpus_ngrams = {k: n_grams(t) for k, t in corpus.items()}
 query_ngrams = n_grams(query)
 # rank all by query similarity
 rankings = rank(lambda t: jaccard_index(query_ngrams, t), corpus_ngrams)
@@ -154,8 +203,8 @@ all vectors when a text in the corpus changes. Uses `SparseVector`s for efficien
 ```python
 from vicinus import ngf, ngf_rank, ngf_select
 
-corpus = ["Text 1 is some text...", "Text 2 is another thing...", ...]
-vecs = [ngf(t) for t in corpus]
+corpus = {1: "Text 1 is some text...", 2: "Text 2 is another thing...", ...}
+vecs = {k: ngf(t) for k, t in corpus.items()}
 query = "text about something"
 # to sort all texts
 rankings = ngf_rank(query, vecs)
@@ -172,13 +221,19 @@ corpus whenever a text changes.
 ```python
 from vicinus import ngf_idf_setup, ngf_idf_rank, ngf_idf_select
 
-corpus = ["Text 1 is some text...", "Text 2 is another thing...", ...]
-corpus_idf, vecs = ngf_idf_setup(corpus)
+# initial setup
+corpus = {1: "Text 1 is some text...", 2: "Text 2 is another thing...", ...}
+corpus_idf, vecs, ngcs = ngf_idf_setup(corpus, N=3) # default N
+
+# add another text and recalculate, reusing n-gram counts
+corpus[new_id] = new_text
+corpus_idf, vecs, ngcs = ngf_idf_setup(corpus, N=3, ng_counts=ngcs)
+
 query = "text about something"
 # to sort all texts by cosine similarity
-all_ranked = ngf_idf_rank(query, corpus_idf, vecs)
-# or select the top k=4 (default)
-candidates = ngf_idf_select(query, corpus_idf, vecs)
+all_ranked = ngf_idf_rank(query, corpus_idf, vecs, N=3) # default N
+# or select the top k=2
+candidates = ngf_idf_select(query, corpus_idf, vecs, 2, N=3)
 ```
 
 Note: N=5 resulted in far more accurate rankings for the test vectors than the
@@ -186,18 +241,31 @@ default N=3 for Jaccard Index, NGF, and NGF-IDF. This may require some tuning.
 Higher `N` values lead to sparser vectors and lower cosine similarity/Jaccard
 Index scores, but this appears to be primarily a culling of noise.
 
+#### SparseVector
+
+The `SparseVector` class stores non-0 values and their indices. It implements several
+noteworth methods:
+- `get(self, index: int, default = 0) -> int|float`
+- `keys(self) -> set[int]`
+- `values(self) -> ValuesView[int|float]`
+- `items(self) -> ItemsView[tuple[int, int|float]]`
+- `norm(self) -> float`
+- `dot_product(self, other: SparseVector) -> float`
+- `cosine_similarity(self, other: SparseVector) -> float`
+- `copy(self) -> SparseVector`
+
 ### Docs
 
-Documentation generated by [autodox](https://pypi.org/project/autodox) (with one
-fix due to a bug/missing feature in autodox) can be found
-[here](https://github.com/k98kurz/vicinus/blob/master/docs.md).
+Documentation generated by [autodox](https://pypi.org/project/autodox)
+can be found [here](https://github.com/k98kurz/vicinus/blob/master/docs.md).
 
 ## Note on Generative AI Use
 
-All code and documentation was written by hand, including the test suite. I used
-mistral and gemma4:e4b (running on my own machine via ollama with some fun bashfu)
-to write the text samples for testing. I also used gemma4:31b via Ollama cloud in
-OpenCode for code review (it caught a few loose ends and documentation issues).
+All code and documentation (except docs.md) was written by hand, including the
+test suite. I used mistral and gemma4:e4b (running on my own machine via ollama
+with some fun bashfu) to write the text samples for testing (they are slop). I
+also used gemma4:31b via Ollama cloud in OpenCode for code review (it caught a
+few loose ends and documentation issues).
 
 The inspiration for this library came during development of a yet unreleased new
 agentic harness system that I intend to optimize for small, local models: as I
@@ -221,11 +289,15 @@ requirements.txt. Then run the following command to run the test suite.
 
 ```bash
 pip install -e . # or use uv
-python -m unittest -s discover tests
+python -m unittest discover tests
 ```
 
-There are currently 38 tests covering all functionality except the CLI, which is
-tested manually.
+There are currently 46 tests covering all functionality except the CLI, which is
+tested manually. Note that one of the tests occasionally fails due to floating
+point arithmetic behaviors, and one asserting better performance for
+`IDFMode.SAVE_COUNTS` occasionally fails, perhaps due to unpredictable memory
+allocation patterns; opportunities for further optimizations will be explored in
+the future.
 
 ## Contributing
 

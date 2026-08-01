@@ -1,4 +1,3 @@
-from functools import lru_cache
 from vicinus.errors import type_assert, value_assert
 
 
@@ -32,7 +31,7 @@ def levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
                     state[1][j-1],
                     state[0][j-1]
                 )
-        state[0] = {**state[1]}
+        state[0].update(state[1])
 
     d = state[0][lbl-1]
     return d if not normalize else d / max(lal, lbl)

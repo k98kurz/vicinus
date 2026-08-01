@@ -60,8 +60,7 @@ def main() -> None:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog='vicinus',
-        description=('CLI for the Vicinus fuzzy search package. Currently '
-            'supports only an agent skill export subcommand.')
+        description=('CLI for the Vicinus fuzzy search package.')
     )
 
     subparsers = parser.add_subparsers(

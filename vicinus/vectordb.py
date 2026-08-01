@@ -8,21 +8,27 @@ from vicinus.sparse_vector import SparseVector
 
 
 class VDBMode(IntEnum):
+    """Enum representing valid VectorDB modes: NGF, NGF_IDF, or JACCARD."""
     NGF = 0
     NGF_IDF = 1
     JACCARD = 2
 
 
 class IDFMode(IntEnum):
+    """Enum representing valid modes for NGF-IDF calculation: either
+        SAVE_SPACE for default behavior or SAVE_COUNTS for reusing the
+        N-Gram counts during recalculation.
+    """
     SAVE_SPACE = 0
     SAVE_COUNTS = 1
 
 
 class VectorDB:
     """Class implementing an in-memory vector database. Can be
-        configured for NGF or NGF-IDF (NGF by default), N-Gram size
-        (default is 5), and IDF mode (either saving space or saving
-        N-Gram counts to save on index computational costs of CRUD ops).
+        configured for Jaccard, NGF, or NGF-IDF (NGF by default), N-Gram
+        size (default is 5), and IDF mode (either saving space or saving
+        N-Gram counts to save on index computational costs of CRUD ops;
+        `IDFMode.SAVE_SPACE` is default).
     """
     N: int
     mode: VDBMode
@@ -36,6 +42,9 @@ class VectorDB:
             self, N: int = 5, *,
             mode: VDBMode = VDBMode.NGF, idf_mode: IDFMode = IDFMode.SAVE_SPACE,
         ):
+        """Initialize with the given configuration. Raises `TypeError`
+            or `ValueError` for invalid arguments.
+        """
         type_assert(type(N) is int, 'N must be int >0')
         value_assert(N > 0, 'N must be int >0')
         self.N = N
@@ -96,16 +105,19 @@ class VectorDB:
             vectors: dict[Hashable, SparseVector|set[str]] = None,
             idf: SparseVector = None,
             ng_counts: dict[Hashable, SparseVector] = None,
+            recalculate: bool = True,
         ) -> None:
         """Set the initial corpus. `corpus` must be a dict mapping
             titles/ids to contents. To avoid recalculations when
             restoring db state from persistent storage, pass `vectors`
-            (for both `VDBMode`s), `idf` (for `VDBMode.NGF_IDF`), and/or
+            (for any `VDBMode`), `idf` (for `VDBMode.NGF_IDF`), and/or
             `ng_counts` (for `VDBMode.NGF_IDF`). `vectors` is an
             optional dict mapping the titles/ids to `SparseVector`s or
             `set[str]` (for `VDBMode.JACCARD`). `idf` is the IDF
             `SparseVector`. `ng_counts` is a dict mapping titles/ids
-            to N-Gram counts.
+            to `SparseVector` N-Gram counts. If `recalculate=True`
+            (default), calls `self.recalculate()`. Raises `TypeError` or
+            `ValueError` for invalid arguments.
         """
         type_assert(isinstance(corpus, dict), 'corpus must be dict[str, str]')
         type_assert(all([type(v) is str for v in corpus.values()]),
@@ -130,8 +142,6 @@ class VectorDB:
         if ng_counts is not None:
             type_assert(isinstance(ng_counts, dict),
                 'ng_counts must be dict[str, SparseVector]')
-            type_assert(isinstance(ng_counts, dict),
-                'ng_counts must be dict[str, SparseVector]')
             type_assert(all([
                     isinstance(v, SparseVector) for v in ng_counts.values()
                 ]),
@@ -145,11 +155,14 @@ class VectorDB:
         self.idf = idf if idf else None
         self.ng_counts = {**ng_counts} if ng_counts else {}
 
-        self.recalculate()
+        return self.recalculate() if recalculate else None
 
     def add(
             self, vector_id: Hashable, content: str, recalculate: bool = True
         ) -> None:
+        """Add a record to the vector db. If recalculate is `True`,
+            `self.recalculate()` will be called (default behavior).
+        """
         if vector_id in self.corpus:
             return
 
@@ -157,6 +170,11 @@ class VectorDB:
         return self.recalculate() if recalculate else None
 
     def get(self, vector_id: Hashable) -> tuple[str, list[SparseVector|set]]:
+        """Get a specific record by its id. Returns a tuple of the form
+            `(content, [vector])` or `(content, [vector, ng_count])`
+            (vector will bet `set[str]` for `VDBMode.JACCARD`). Raises
+            `IndexError` if the id is not found.
+        """
         if vector_id not in self.corpus:
             raise IndexError(f"vector_id={vector_id} not found")
 
@@ -171,6 +189,10 @@ class VectorDB:
     def update(
             self, vector_id: Hashable, content: str, recalculate: bool = True
         ) -> None:
+        """Update a record, replacing its content. If the record does
+            not yet exist, add it. If `recalculate=True` (default), then
+            `self.recalculate()` will be called.
+        """
         if vector_id not in self.corpus:
             return self.add(vector_id, content, recalculate)
 
@@ -188,6 +210,10 @@ class VectorDB:
         return self.recalculate() if recalculate else None
 
     def remove(self, vector_id: Hashable, recalculate: bool = True) -> None:
+        """Remove a record by its id. If it does not exist, no-op. If
+            `recalculate=True` (default), then `self.recalculate()` will
+            be called.
+        """
         if vector_id not in self.corpus:
             return
 
@@ -205,6 +231,11 @@ class VectorDB:
         return self.recalculate() if recalculate else None
 
     def search(self, query: str, limit: int = 4) -> list[tuple[float, Hashable]]:
+        """Search through the records using the appropriate algorithm.
+            Results are ordered by descending similarity score. Returns
+            a list of tuples of form `(score, id)`. Set `limit=-1` to
+            return all results. Raises `TypeError` for non-int `limit`.
+        """
         if self.mode is VDBMode.JACCARD:
             q = n_grams(query, self.N)
             rankings = rank(lambda s: jaccard_index(q, s), self.vectors)
