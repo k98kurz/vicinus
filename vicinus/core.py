@@ -45,6 +45,8 @@ def tokenize(text: str) -> list[str]:
         tokens.
     """
     return [
-        ''.join(c for c in word if c.isalnum())
-        for word in text.lower().split()
+        t for t in (
+            ''.join(c for c in word if c.isalnum())
+            for word in text.lower().split()
+        ) if t
     ]

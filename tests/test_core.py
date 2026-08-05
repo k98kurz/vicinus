@@ -12,6 +12,15 @@ class TestCore(unittest.TestCase):
         assert all([t.islower() for t in tokens]), tokens
         assert all([t.isalnum() for t in tokens]), tokens
 
+    def test_tokenize_returns_no_empty_strs(self):
+        tokens = tokenize(f"## {self.original}")
+        assert all(tokens), tokens
+
+    def test_tokenize_is_idempotent(self):
+        t1 = tokenize(f"## {self.original}")
+        t2 = tokenize(' '.join(t1))
+        assert t1 == t2, (t1, t2)
+
     def test_rank_returns_sorted_list_of_tuples(self):
         fn = lambda x: (len(x) + len(self.original))/len(self.original)
         texts = {
