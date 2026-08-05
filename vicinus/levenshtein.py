@@ -1,8 +1,6 @@
 from vicinus.errors import type_assert, value_assert
 
 
-_head = lambda text: text[0]
-
 def levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
     """Calculate Levenshtein distance between two strs. If `normalize`
         is `False` (default), distance is returned directly as an int.
@@ -17,13 +15,13 @@ def levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
         return lbl if not normalize else 1.0
 
     state = [{}, {}]
-    for i in range(lal):
-        for j in range(lbl):
+    for i in range(lal+1):
+        for j in range(lbl+1):
             if i == 0:
                 state[1][j] = j
             elif j == 0:
                 state[1][j] = i
-            elif _head(a[i:]) == _head(b[j:]):
+            elif a[i-1] == b[j-1]:
                 state[1][j] = state[0][j-1]
             else:
                 state[1][j] = 1 + min(
@@ -33,7 +31,7 @@ def levenshtein_distance(a: str, b: str, normalize: bool = False) -> int|float:
                 )
         state[0].update(state[1])
 
-    d = state[0][lbl-1]
+    d = state[0][lbl]
     return d if not normalize else d / max(lal, lbl)
 
 def levenshtein_similarity(a: str, b: str) -> float:

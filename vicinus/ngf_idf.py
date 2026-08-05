@@ -13,9 +13,9 @@ def ngf_index(ng: str) -> int:
     for i in range(N):
         c = ng[i]
         if '0' <= c <= '9':
-            ind += (ord(c) - ord('0')) * (10 ** (N-i-1))
+            ind += (ord(c) - ord('0')) * (36 ** (N-i-1))
         elif 'a' <= c <= 'z':
-            ind += (10 + ord(c) - ord('a')) * (10 ** (N-i-1))
+            ind += (10 + ord(c) - ord('a')) * (36 ** (N-i-1))
     return ind
 
 
@@ -55,7 +55,7 @@ def ngf(text: str, N: int = 3, vec: SparseVector = None) -> SparseVector:
 
 
 def ngf_rank(
-        query: str, text_vecs: list[SparseVector], N: int = 3
+        query: str, text_vecs: dict[Any, SparseVector], N: int = 3
     ) -> list[tuple[float, int]]:
     """Runs NGF cosine similarity between the query and the text
         vectors. Returns a sorted list of form `[(similarity, index)]`.

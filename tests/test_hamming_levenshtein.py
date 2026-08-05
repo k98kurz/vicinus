@@ -18,6 +18,7 @@ class TestHammingLev(unittest.TestCase):
         assert hamming_distance("hello world", "hxxlo world") == 2
         assert hamming_distance("hello world", "hxxlo worl") == 3
         assert hamming_distance("hello world", "ello world") == 10
+        assert hamming_distance("kitten", "sitting") == 3
 
     def test_hamming_distance_normalized_returns_float(self):
         hd = hamming_distance(
@@ -43,6 +44,8 @@ class TestHammingLev(unittest.TestCase):
         assert d == 3, d
         d = levenshtein_distance("hello world", "ello world")
         assert d == 1, d
+        d = levenshtein_distance("kitten", "sitting")
+        assert d == 3, d
 
     def test_levenshtein_distance_normalized_returns_float(self):
         ld = levenshtein_distance(
