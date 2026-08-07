@@ -41,6 +41,7 @@ class TestVectorDB(unittest.TestCase):
     def test_VectorDB_JACCARD_mode_e2e(self):
         doc = self.docdb.get(self.docdb.find('horse-tinder-pitch.txt'))
         vdb = VectorDB(mode=VDBMode.JACCARD)
+        assert vdb.N == 5, vdb.N
         assert len(vdb.corpus) == 0, len(vdb.corpus)
         assert len(vdb.vectors) == 0, len(vdb.vectors)
 
@@ -93,7 +94,7 @@ class TestVectorDB(unittest.TestCase):
         assert type(results) is list, type(results)
         assert len(results) == 4, len(results)
         assert results[0][1] == doc.title, results
-        print(f"JACCARD: {query=}")
+        print(f"\nJACCARD: {query=}")
         for r in results:
             print(r)
         print(
@@ -111,11 +112,12 @@ class TestVectorDB(unittest.TestCase):
             times.append(end-start)
 
         avgtime = sum(times) / len(times)
-        print(f"query time (avg): {avgtime:.4f}s\n")
+        print(f"query time (avg): {avgtime:.4f}s")
 
     def test_VectorDB_NGF_mode_e2e(self):
         doc = self.docdb.get(self.docdb.find('horse-tinder-pitch.txt'))
         vdb = VectorDB(mode=VDBMode.NGF)
+        assert vdb.N == 5, vdb.N
         assert len(vdb.corpus) == 0, len(vdb.corpus)
         assert len(vdb.vectors) == 0, len(vdb.vectors)
 
@@ -168,7 +170,7 @@ class TestVectorDB(unittest.TestCase):
         assert type(results) is list, type(results)
         assert len(results) == 4, len(results)
         assert results[0][1] == doc.title, results
-        print(f"NGF: {query=}")
+        print(f"\nNGF: {query=}")
         for r in results:
             print(r)
         print(
@@ -186,11 +188,12 @@ class TestVectorDB(unittest.TestCase):
             times.append(end-start)
 
         avgtime = sum(times) / len(times)
-        print(f"query time (avg): {avgtime:.4f}s\n")
+        print(f"query time (avg): {avgtime:.4f}s")
 
     def test_VectorDB_NGF_IDF_mode_SAVE_SPACE_e2e(self):
         doc = self.docdb.get(self.docdb.find('horse-tinder-pitch.txt'))
         vdb = VectorDB(mode=VDBMode.NGF_IDF)
+        assert vdb.N == 5, vdb.N
         assert vdb.idf_mode is IDFMode.SAVE_SPACE, vdb.idf_mode
         assert len(vdb.corpus) == 0, len(vdb.corpus)
         assert len(vdb.vectors) == 0, len(vdb.vectors)
@@ -244,7 +247,7 @@ class TestVectorDB(unittest.TestCase):
         assert type(results) is list, type(results)
         assert len(results) == 4, len(results)
         assert results[0][1] == doc.title, results
-        print(f"NGF_IDF: {query=}")
+        print(f"\nNGF_IDF: {query=}")
         for r in results:
             print(r)
         print(
@@ -262,7 +265,7 @@ class TestVectorDB(unittest.TestCase):
             times.append(end-start)
 
         avgtime = sum(times) / len(times)
-        print(f"query time (avg): {avgtime:.4f}s\n")
+        print(f"query time (avg): {avgtime:.4f}s")
 
     def test_VectorDB_NGF_IDF_SAVE_COUNTS_has_faster_recalculate(self):
         doc = self.docdb.get(0)
@@ -294,8 +297,8 @@ class TestVectorDB(unittest.TestCase):
         end2 = perf_counter()
         diff2 = end2 - start2
 
-        print(f"Recalculate, NGF_IDF, IDFMode.SAVE_SPACE: {diff1}")
-        print(f"Recalculate, NGF_IDF, IDFMode.SAVE_COUNTS: {diff2}\n")
+        print(f"\nRecalculate, NGF_IDF, IDFMode.SAVE_SPACE: {diff1}")
+        print(f"Recalculate, NGF_IDF, IDFMode.SAVE_COUNTS: {diff2}")
 
         assert diff2 < diff1, (diff1, diff2)
 
@@ -357,7 +360,7 @@ class TestVectorDB(unittest.TestCase):
         assert type(results) is list, type(results)
         assert len(results) == 4, len(results)
         assert results[0][1] == doc.title, results
-        print(f"CTF: {query=}")
+        print(f"\nCTF: {query=}")
         for r in results:
             print(r)
         ratio = f"{(results[0][0]/results[1][0]):.2f}" if results[1][0] else '+inf'
@@ -376,7 +379,7 @@ class TestVectorDB(unittest.TestCase):
             times.append(end-start)
 
         avgtime = sum(times) / len(times)
-        print(f"query time (avg): {avgtime:.4f}s\n")
+        print(f"query time (avg): {avgtime:.4f}s")
 
     def test_VectorDB_CTF_IDF_mode_SAVE_SPACE_e2e(self):
         doc = self.docdb.get(self.docdb.find('horse-tinder-pitch.txt'))
@@ -437,7 +440,7 @@ class TestVectorDB(unittest.TestCase):
         assert type(results) is list, type(results)
         assert len(results) == 4, len(results)
         assert results[0][1] == doc.title, results
-        print(f"CTF_IDF: {query=}")
+        print(f"\nCTF_IDF: {query=}")
         for r in results:
             print(r)
         ratio = f"{(results[0][0]/results[1][0]):.2f}" if results[1][0] else '+inf'
@@ -456,7 +459,7 @@ class TestVectorDB(unittest.TestCase):
             times.append(end-start)
 
         avgtime = sum(times) / len(times)
-        print(f"query time (avg): {avgtime:.4f}s\n")
+        print(f"query time (avg): {avgtime:.4f}s")
 
     def test_VectorDB_CTF_IDF_SAVE_COUNTS_has_faster_recalculate(self):
         doc = self.docdb.get(0)
@@ -488,8 +491,8 @@ class TestVectorDB(unittest.TestCase):
         end2 = perf_counter()
         diff2 = end2 - start2
 
-        print(f"Recalculate, CTF_IDF, IDFMode.SAVE_SPACE: {diff1}")
-        print(f"Recalculate, CTF_IDF, IDFMode.SAVE_COUNTS: {diff2}\n")
+        print(f"\nRecalculate, CTF_IDF, IDFMode.SAVE_SPACE: {diff1}")
+        print(f"Recalculate, CTF_IDF, IDFMode.SAVE_COUNTS: {diff2}")
 
         assert diff2 < diff1, (diff1, diff2)
 
