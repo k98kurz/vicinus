@@ -67,7 +67,7 @@ class SparseVector:
         """Return a view of all elements."""
         return self._data.values()
 
-    def items(self) -> ItemsView[tuple[int, int|float]]:
+    def items(self) -> ItemsView[int, int|float]:
         """Return an ItemsView for `for i, e in vec.items()` syntax."""
         return self._data.items()
 
