@@ -40,6 +40,14 @@ class SparseVector:
     def __repr__(self) -> str:
         return f"SparseVector{repr(self._data)}"
 
+    def __add__(self, other: SparseVector) -> SparseVector:
+        type_assert(isinstance(other, SparseVector), 'other must be SparseVector')
+        indices = self.keys() | other.keys()
+        return SparseVector({
+            i: self[i] + other[i]
+            for i in indices
+        })
+
     def get(self, index: int, default = 0) -> int|float|None:
         """Get the element at the specified index."""
         type_assert(isinstance(index, int), 'index must be int')

@@ -42,6 +42,17 @@ class TestSparseVector(unittest.TestCase):
             assert k // 10 == 0, k
             assert k in vec.keys()
 
+    def test_SparseVector_addition_e2e(self):
+        v1 = SparseVector({0: 1, 1: 1})
+        v2 = SparseVector({1: 1, 2: 1})
+        v3 = v1 + v2
+        assert type(v3) is SparseVector, type(v3)
+        assert v3 is not v1 and v3 is not v2
+        assert v3.keys() == v1.keys() | v2.keys(), (v3.keys(), v1.keys() | v2.keys())
+        assert v3[0] == 1, v3
+        assert v3[1] == 2, v3
+        assert v3[0] == 1, v3
+
     def test_SparseVector_keys_values_items(self):
         vec = SparseVector({i: i*10 for i in range(1, 10)})
         assert isinstance(vec.keys(), set), type(vec.keys())
