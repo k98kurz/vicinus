@@ -119,7 +119,7 @@ def ngf_idf_setup(
     N = len(corpus) + 1
     idf = SparseVector()
     for i in corpus_counts:
-        n = sum([1 if i in v else 0 for v in vecs.values()]) + 1
+        n = sum([1 if i in v.values() else 0 for v in vecs.values()]) + 1
         idf[i] = log(N / n)
 
     # 5: NGF-IDF
@@ -137,6 +137,11 @@ def ngf_idf_query(
     """Processes a query, calculating the NGF-IDF vector for it using
         the corpus IDF vector.
     """
+    type_assert(type(query) is str, 'query must be str')
+    type_assert(isinstance(corpus_idf, SparseVector),
+        'corpus_idf must be SparseVector')
+    value_assert(N > 0, 'N must be >0') if N is not None else N
+
     # 1: NG count for query
     ngc = ng_count(query, N=N)
 

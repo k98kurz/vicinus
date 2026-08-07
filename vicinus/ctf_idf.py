@@ -7,8 +7,9 @@ from zlib import crc32
 
 
 def ctf_index(token: str, N: int = None) -> int:
-    """Calculate the CRC vector index for a given token. With `N=None`,
-        dimensionality will be `2**32` (the full range of crc32).
+    """Calculate the CRC vector index for a given token. With `N=None`
+        or `N=0`, dimensionality will be `2**32` (the full range of
+        crc32).
     """
     return crc32(token.encode()) % N if N else crc32(token.encode())
 
@@ -115,7 +116,7 @@ def ctf_idf_setup(
     N = len(corpus) + 1
     idf = SparseVector()
     for i in corpus_counts:
-        n = sum([1 if i in v else 0 for v in vecs.values()]) + 1
+        n = sum([1 if i in v.values() else 0 for v in vecs.values()]) + 1
         idf[i] = log(N / n)
 
     # 5: CTF-IDF
@@ -138,6 +139,7 @@ def ctf_idf_query(
         'corpus_idf must be SparseVector')
     type_assert(type(N) is int or N is None, 'N must be int|None')
     value_assert(N > 1, 'N must be >1') if N is not None else N
+
     # 1: CT count for query
     ctc = ct_count(query, N=N)
 
