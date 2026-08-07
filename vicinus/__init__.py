@@ -1,4 +1,8 @@
 from vicinus.core import rank, select, tokenize
+from vicinus.ctf_idf import (
+    ctf_index, ct_count, ctf, ctf_rank, ctf_select,
+    ctf_idf_setup, ctf_idf_query, ctf_idf_rank, ctf_idf_select,
+)
 from vicinus.hamming import hamming_distance, hamming_similarity
 from vicinus.levenshtein import levenshtein_distance, levenshtein_similarity
 from vicinus.ngf_idf import (

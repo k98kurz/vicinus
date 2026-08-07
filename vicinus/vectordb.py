@@ -1,6 +1,7 @@
 from enum import IntEnum
 from typing import Hashable
 from vicinus.core import rank, select
+from vicinus.ctf_idf import ctf, ctf_rank, ctf_idf_setup, ctf_idf_rank
 from vicinus.errors import type_assert, value_assert
 from vicinus.ngf_idf import ngf, ngf_rank, ngf_idf_setup, ngf_idf_rank
 from vicinus.ngrams import n_grams, jaccard_index
@@ -12,12 +13,14 @@ class VDBMode(IntEnum):
     NGF = 0
     NGF_IDF = 1
     JACCARD = 2
+    CTF = 3
+    CTF_IDF = 4
 
 
 class IDFMode(IntEnum):
-    """Enum representing valid modes for NGF-IDF calculation: either
+    """Enum representing valid modes for NGF-IDF/CTF-IDF calculation: either
         SAVE_SPACE for default behavior or SAVE_COUNTS for reusing the
-        N-Gram counts during recalculation.
+        N-Gram/CRC(Token) counts during recalculation.
     """
     SAVE_SPACE = 0
     SAVE_COUNTS = 1
@@ -25,44 +28,56 @@ class IDFMode(IntEnum):
 
 class VectorDB:
     """Class implementing an in-memory vector database. Can be
-        configured for Jaccard, NGF, or NGF-IDF (NGF by default), N-Gram
-        size (default is 5), and IDF mode (either saving space or saving
+        configured for Jaccard, NGF, NGF-IDF, CTF, or CTF-IDF (NGF by
+        default), N-Gram size/CT dimensions (default is 5 or 10000,
+        respectively), and IDF mode (either saving space or saving
         N-Gram counts to save on index computational costs of CRUD ops;
         `IDFMode.SAVE_SPACE` is default).
     """
-    N: int
+    N: int|None
     mode: VDBMode
     idf_mode: IDFMode
     corpus: dict[Hashable, str]
     vectors: dict[Hashable, SparseVector|set[str]]
     idf: SparseVector | None
-    ng_counts: dict[Hashable, SparseVector] | None
+    counts: dict[Hashable, SparseVector] | None
 
     def __init__(
-            self, N: int = 5, *,
+            self, N: int = None, *,
             mode: VDBMode = VDBMode.NGF, idf_mode: IDFMode = IDFMode.SAVE_SPACE,
         ):
         """Initialize with the given configuration. Raises `TypeError`
-            or `ValueError` for invalid arguments.
+            or `ValueError` for invalid arguments. For `VDBMode.CTF` or
+            `VDBMode.CTF_IDF`, pass `N=-1` to use `2**32` dimensions
+            (full crc32 range) instead of reducing dimensionality by
+            modulo.
         """
-        type_assert(type(N) is int, 'N must be int >0')
-        value_assert(N > 0, 'N must be int >0')
-        self.N = N
-
         type_assert(isinstance(mode, VDBMode), 'mode must be VDBMode')
         self.mode = mode
 
         type_assert(isinstance(idf_mode, IDFMode), 'idf_mode must be IDFMode')
         self.idf_mode = idf_mode
 
+        type_assert(type(N) is int or N is None, 'N must be int|None')
+        if self.mode in (VDBMode.CTF, VDBMode.CTF_IDF):
+            if N is None:
+                N = 10_000
+            elif N < 0:
+                N = None
+        elif N is None: # default for NGF, NGF_IDF, JACCARD
+            N = 5
+        if self.mode not in (VDBMode.CTF, VDBMode.CTF_IDF):
+            value_assert(N > 1, f'N must be >1 for {self.mode.name}')
+        self.N = N
+
         self.corpus = {}
         self.vectors = {}
         self.idf = None
-        self.ng_counts = None
+        self.counts = None
 
-        if self.mode is VDBMode.NGF_IDF:
+        if self.mode in (VDBMode.NGF_IDF, VDBMode.CTF_IDF):
             self.idf = SparseVector()
-            self.ng_counts = {}
+            self.counts = {}
 
     def recalculate(self, replace: bool = False):
         """Recalculate the "index", i.e. the `SparseVector`s used for
@@ -85,36 +100,59 @@ class VectorDB:
                     self.vectors[k] = ngf(v, self.N)
             return
 
-        # NGF-IDF
-        if len(self.corpus) == len(self.vectors) and self.idf and not replace:
-            return # already set
+        if self.mode is VDBMode.NGF_IDF:
+            if len(self.corpus) == len(self.vectors) and self.idf and not replace:
+                return # already set
+    
+            if replace:
+                idf, vectors, counts = ngf_idf_setup(self.corpus, self.N)
+            else:
+                idf, vectors, counts = ngf_idf_setup(
+                    self.corpus, self.N, self.counts
+                )
+            self.idf = idf
+            self.vectors = vectors
+            if self.idf_mode is IDFMode.SAVE_COUNTS:
+                self.counts = counts
+            return
 
-        if replace:
-            idf, vectors, ng_counts = ngf_idf_setup(self.corpus, self.N)
-        else:
-            idf, vectors, ng_counts = ngf_idf_setup(
-                self.corpus, self.N, self.ng_counts
-            )
-        self.idf = idf
-        self.vectors = vectors
-        if self.idf_mode is IDFMode.SAVE_COUNTS:
-            self.ng_counts = ng_counts
+        if self.mode is VDBMode.CTF:
+            for k, v in self.corpus.items():
+                if k not in self.vectors or replace:
+                    self.vectors[k] = ctf(v, self.N)
+            return
+
+        if self.mode is VDBMode.CTF_IDF:
+            if len(self.corpus) == len(self.vectors) and self.idf and not replace:
+                return # already set
+    
+            if replace:
+                idf, vectors, counts = ctf_idf_setup(self.corpus, self.N)
+            else:
+                idf, vectors, counts = ctf_idf_setup(
+                    self.corpus, self.N, self.counts
+                )
+            self.idf = idf
+            self.vectors = vectors
+            if self.idf_mode is IDFMode.SAVE_COUNTS:
+                self.counts = counts
+            return
 
     def set_corpus(
             self, corpus: dict[Hashable, str],
             vectors: dict[Hashable, SparseVector|set[str]] = None,
             idf: SparseVector = None,
-            ng_counts: dict[Hashable, SparseVector] = None,
+            counts: dict[Hashable, SparseVector] = None,
             recalculate: bool = True,
         ) -> None:
         """Set the initial corpus. `corpus` must be a dict mapping
             titles/ids to contents. To avoid recalculations when
             restoring db state from persistent storage, pass `vectors`
             (for any `VDBMode`), `idf` (for `VDBMode.NGF_IDF`), and/or
-            `ng_counts` (for `VDBMode.NGF_IDF`). `vectors` is an
+            `counts` (for `VDBMode.NGF_IDF`). `vectors` is an
             optional dict mapping the titles/ids to `SparseVector`s or
             `set[str]` (for `VDBMode.JACCARD`). `idf` is the IDF
-            `SparseVector`. `ng_counts` is a dict mapping titles/ids
+            `SparseVector`. `counts` is a dict mapping titles/ids
             to `SparseVector` N-Gram counts. If `recalculate=True`
             (default), calls `self.recalculate()`. Raises `TypeError` or
             `ValueError` for invalid arguments.
@@ -125,12 +163,12 @@ class VectorDB:
 
         if vectors is not None:
             type_assert(isinstance(vectors, dict),
-                'vectors must be dict[str, SparseVector]')
+                'vectors must be dict[Hashable, SparseVector]')
             type_assert(
                 all([
                     type(v) in (SparseVector, set) for v in vectors.values()
                 ]),
-                'vectors must be dict[str, SparseVector]'
+                'vectors must be dict[Hashable, SparseVector]'
             )
             value_assert(all([k in corpus for k in vectors]),
                 '`vectors` keys must match `corpus` keys')
@@ -139,21 +177,21 @@ class VectorDB:
             type_assert(isinstance(idf, SparseVector),
                 'idf must be SparseVector')
 
-        if ng_counts is not None:
-            type_assert(isinstance(ng_counts, dict),
-                'ng_counts must be dict[str, SparseVector]')
+        if counts is not None:
+            type_assert(isinstance(counts, dict),
+                'counts must be dict[str, SparseVector]')
             type_assert(all([
-                    isinstance(v, SparseVector) for v in ng_counts.values()
+                    isinstance(v, SparseVector) for v in counts.values()
                 ]),
-                'ng_counts must be dict[str, SparseVector]'
+                'counts must be dict[Hashable, SparseVector]'
             )
-            value_assert(all([k in corpus for k in ng_counts]),
-                '`ng_counts` keys must match `corpus` keys')
+            value_assert(all([k in corpus for k in counts]),
+                '`counts` keys must match `corpus` keys')
 
         self.corpus = {**corpus}
         self.vectors = {**vectors} if vectors else {}
         self.idf = idf if idf else None
-        self.ng_counts = {**ng_counts} if ng_counts else {}
+        self.counts = counts if counts else {}
 
         return self.recalculate() if recalculate else None
 
@@ -181,8 +219,8 @@ class VectorDB:
         vecs = []
         if vector_id in self.vectors:
             vecs.append(self.vectors[vector_id])
-        if self.ng_counts and vector_id in self.ng_counts:
-            vecs.append(self.ng_counts[vector_id])
+        if self.counts and vector_id in self.counts:
+            vecs.append(self.counts[vector_id])
 
         return self.corpus[vector_id], vecs
 
@@ -204,8 +242,8 @@ class VectorDB:
         if vector_id in self.vectors:
             del self.vectors[vector_id]
 
-        if self.ng_counts and vector_id in self.ng_counts:
-            del self.ng_counts[vector_id]
+        if self.counts and vector_id in self.counts:
+            del self.counts[vector_id]
 
         return self.recalculate() if recalculate else None
 
@@ -222,8 +260,8 @@ class VectorDB:
         if vector_id in self.vectors:
             del self.vectors[vector_id]
 
-        if self.ng_counts and vector_id in self.ng_counts:
-            del self.ng_counts[vector_id]
+        if self.counts and vector_id in self.counts:
+            del self.counts[vector_id]
 
         if recalculate and self.mode is VDBMode.NGF_IDF:
             self.idf = None
@@ -243,5 +281,9 @@ class VectorDB:
             rankings = ngf_rank(query, self.vectors, self.N)
         elif self.mode is VDBMode.NGF_IDF:
             rankings = ngf_idf_rank(query, self.idf, self.vectors, self.N)
+        elif self.mode is VDBMode.CTF:
+            rankings = ctf_rank(query, self.vectors, self.N)
+        elif self.mode is VDBMode.CTF_IDF:
+            rankings = ctf_idf_rank(query, self.idf, self.vectors, self.N)
 
         return rankings if limit < 1 else select(rankings, limit)
