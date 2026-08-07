@@ -53,6 +53,14 @@ class TestSparseVector(unittest.TestCase):
         assert v3[1] == 2, v3
         assert v3[0] == 1, v3
 
+    def test_SparseVector_equality_comparison_e2e(self):
+        v1 = SparseVector({0: 1, 1: 1})
+        v2 = SparseVector({1: 1, 2: 1})
+        v1c = v1.copy()
+        assert v1 != v2
+        assert v1 is not v1c
+        assert v1 == v1c
+
     def test_SparseVector_keys_values_items(self):
         vec = SparseVector({i: i*10 for i in range(1, 10)})
         assert isinstance(vec.keys(), set), type(vec.keys())

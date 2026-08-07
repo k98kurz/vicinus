@@ -48,6 +48,12 @@ class SparseVector:
             for i in indices
         })
 
+    def __eq__(self, other: SparseVector) -> bool:
+        type_assert(isinstance(other, SparseVector), 'other must be SparseVector')
+        if self.keys() != other.keys():
+            return False
+        return all([self[i] == other[i] for i in self.keys()])
+
     def get(self, index: int, default = 0) -> int|float|None:
         """Get the element at the specified index."""
         type_assert(isinstance(index, int), 'index must be int')

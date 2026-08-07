@@ -64,6 +64,8 @@ class VectorDB:
                 N = 10_000
             elif N < 0:
                 N = None
+            else:
+                value_assert(N > 1, 'N must be -1, None, or >1')
         elif N is None: # default for NGF, NGF_IDF, JACCARD
             N = 5
         if self.mode not in (VDBMode.CTF, VDBMode.CTF_IDF):
@@ -263,7 +265,7 @@ class VectorDB:
         if self.counts and vector_id in self.counts:
             del self.counts[vector_id]
 
-        if recalculate and self.mode is VDBMode.NGF_IDF:
+        if recalculate and self.mode in (VDBMode.NGF_IDF, VDBMode.CTF_IDF):
             self.idf = None
 
         return self.recalculate() if recalculate else None

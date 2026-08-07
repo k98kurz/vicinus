@@ -38,6 +38,14 @@ class TestVectorDB(unittest.TestCase):
             vdb = VectorDB(mode=VDBMode.NGF_IDF, N=-1)
         assert 'N must be >1' in str(e.exception)
 
+        with self.assertRaises(ValueError) as e:
+            vdb = VectorDB(mode=VDBMode.CTF, N=0)
+        assert 'N must be' in str(e.exception)
+
+        with self.assertRaises(ValueError) as e:
+            vdb = VectorDB(mode=VDBMode.CTF, N=1)
+        assert 'N must be' in str(e.exception)
+
     def test_VectorDB_JACCARD_mode_e2e(self):
         doc = self.docdb.get(self.docdb.find('horse-tinder-pitch.txt'))
         vdb = VectorDB(mode=VDBMode.JACCARD)
@@ -233,10 +241,13 @@ class TestVectorDB(unittest.TestCase):
         vdb.get(doc.title)
 
         l1 = len(vdb.corpus)
+        idf1 = vdb.idf.copy()
         vdb.remove(doc.title)
         l2 = len(vdb.corpus)
+        idf2 = vdb.idf.copy()
         assert l2 < l1
         assert doc.title not in vdb.corpus
+        assert idf1 != idf2
 
         with self.assertRaises(IndexError):
             vdb.get(doc.title)
@@ -426,10 +437,13 @@ class TestVectorDB(unittest.TestCase):
         vdb.get(doc.title)
 
         l1 = len(vdb.corpus)
+        idf1 = vdb.idf.copy()
         vdb.remove(doc.title)
         l2 = len(vdb.corpus)
+        idf2 = vdb.idf.copy()
         assert l2 < l1
         assert doc.title not in vdb.corpus
+        assert idf1 != idf2
 
         with self.assertRaises(IndexError):
             vdb.get(doc.title)
