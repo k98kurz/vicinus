@@ -25,7 +25,7 @@ Return the set of indices at which elements exist.
 
 Return a view of all elements.
 
-##### `items() -> ItemsView[tuple[int, int | float]]:`
+##### `items() -> ItemsView[int, int | float]:`
 
 Return an ItemsView for `for i, e in vec.items()` syntax.
 
@@ -53,26 +53,29 @@ Return a copy of the `SparseVector`.
 ### `VectorDB`
 
 Class implementing an in-memory vector database. Can be configured for Jaccard,
-NGF, or NGF-IDF (NGF by default), N-Gram size (default is 5), and IDF mode
-(either saving space or saving N-Gram counts to save on index computational
-costs of CRUD ops; `IDFMode.SAVE_SPACE` is default).
+NGF, NGF-IDF, CTF, or CTF-IDF (NGF by default), N-Gram size/CT dimensions
+(default is 5 or 10000, respectively), and IDF mode (either saving space or
+saving N-Gram counts to save on index computational costs of CRUD ops;
+`IDFMode.SAVE_SPACE` is default).
 
 #### Annotations
 
-- N: <class 'int'>
+- N: int | None
 - mode: <enum 'VDBMode'>
 - idf_mode: <enum 'IDFMode'>
 - corpus: dict[typing.Hashable, str]
 - vectors: dict[typing.Hashable, vicinus.sparse_vector.SparseVector | set[str]]
 - idf: vicinus.sparse_vector.SparseVector | None
-- ng_counts: dict[typing.Hashable, vicinus.sparse_vector.SparseVector] | None
+- counts: dict[typing.Hashable, vicinus.sparse_vector.SparseVector] | None
 
 #### Methods
 
-##### `__init__(N: int = 5, /, *, idf_mode: IDFMode = 0, mode: VDBMode = 0):`
+##### `__init__(N: int = None, /, *, idf_mode: IDFMode = 0, mode: VDBMode = 0):`
 
 Initialize with the given configuration. Raises `TypeError` or `ValueError` for
-invalid arguments.
+invalid arguments. For `VDBMode.CTF` or `VDBMode.CTF_IDF`, pass `N=-1` to use
+`2**32` dimensions (full crc32 range) instead of reducing dimensionality by
+modulo.
 
 ##### `recalculate(replace: bool = False):`
 
@@ -81,16 +84,16 @@ Recalculate the "index", i.e. the `SparseVector`s used for cosine similarity for
 default, only fills in the missing vectors/sets; pass `replace=True` to
 recalculate all vectors/sets.
 
-##### `set_corpus(corpus: dict, vectors: dict = None, idf: SparseVector = None, ng_counts: dict = None, recalculate: bool = True):`
+##### `set_corpus(corpus: dict, vectors: dict = None, idf: SparseVector = None, counts: dict = None, recalculate: bool = True):`
 
 Set the initial corpus. `corpus` must be a dict mapping titles/ids to contents.
 To avoid recalculations when restoring db state from persistent storage, pass
-`vectors` (for any `VDBMode`), `idf` (for `VDBMode.NGF_IDF`), and/or `ng_counts`
+`vectors` (for any `VDBMode`), `idf` (for `VDBMode.NGF_IDF`), and/or `counts`
 (for `VDBMode.NGF_IDF`). `vectors` is an optional dict mapping the titles/ids to
 `SparseVector`s or `set[str]` (for `VDBMode.JACCARD`). `idf` is the IDF
-`SparseVector`. `ng_counts` is a dict mapping titles/ids to `SparseVector`
-N-Gram counts. If `recalculate=True` (default), calls `self.recalculate()`.
-Raises `TypeError` or `ValueError` for invalid arguments.
+`SparseVector`. `counts` is a dict mapping titles/ids to `SparseVector` N-Gram
+counts. If `recalculate=True` (default), calls `self.recalculate()`. Raises
+`TypeError` or `ValueError` for invalid arguments.
 
 ##### `add(vector_id: Hashable, content: str, recalculate: bool = True):`
 
@@ -125,9 +128,9 @@ Enum representing valid VectorDB modes: NGF, NGF_IDF, or JACCARD.
 
 ### `IDFMode(IntEnum)`
 
-Enum representing valid modes for NGF-IDF calculation: either SAVE_SPACE for
-default behavior or SAVE_COUNTS for reusing the N-Gram counts during
-recalculation.
+Enum representing valid modes for NGF-IDF/CTF-IDF calculation: either SAVE_SPACE
+for default behavior or SAVE_COUNTS for reusing the N-Gram/CRC(Token) counts
+during recalculation.
 
 ## Functions
 
@@ -146,6 +149,60 @@ inputs.
 
 Preprocess some text by casting to lower, removing punctuation, and splitting on
 word boundaries. Returns only alphanumeric tokens.
+
+### `ctf_index(token: str, N: int = None) -> int:`
+
+Calculate the CRC vector index for a given token. With `N=None` or `N=0`,
+dimensionality will be `2**32` (the full range of crc32).
+
+### `ct_count(text: str, N: int | None = 10000) -> SparseVector:`
+
+Calculate the CRC(Token) Count of some text. Set `N=None` to use `2**32`
+dimensions.
+
+### `ctf(text: str, N: int | None = 10000, ctc: SparseVector = None) -> SparseVector:`
+
+Calculate the CRC(Token) Frequency of some text. Effectively a version of TF
+with `N` upper limit on dimensionality. Set `N=None` to use `2**32` dimensions.
+
+### `ctf_rank(query: str, text_vecs: dict, N: int | None = 10000) -> list[tuple[float, int]]:`
+
+Runs CTF cosine similarity between the query and the text vectors. Returns a
+sorted list of form `[(similarity, key)]`, where `key` is a key of `text_vecs`.
+Set `N=None` to use `2**32` dimensions.
+
+### `ctf_select(query: str, text_vecs: dict, k: int = 4, N: int | None = 10000) -> list[tuple[float, int]]:`
+
+Runs CTF cosine similarity between the query and the text vectors. Returns the
+top `k` candidates in a sorted list of form `[(similarity, key)]`, where `key`
+is a key of `text_vecs`. Set `N=None` to use `2**32` dimensions.
+
+### `ctf_idf_setup(corpus: dict, N: int | None = 10000, ct_counts: dict = None) -> tuple[vicinus.sparse_vector.SparseVector, dict[typing.Any, vicinus.sparse_vector.SparseVector], dict[typing.Any, vicinus.sparse_vector.SparseVector]]:`
+
+Processes a corpus, creating the vectors for each text in a pipeline: 1) create
+the CRC(Token) count vector for each text; 2) aggregate corpus CT count vector;
+3) create CTF vector for each text; 4) calculate the IDF vector; 5) modify CTF
+vectors by multiplying by the IDF vector. Returns the corpus IDF vector as well
+as the CTF-IDF and CT count vectors for each text. Use the IDF and CTF-IDF
+vectors to do fuzzy search; save and re-use CT count vectors to skip step 1
+during updates. Set `N=None` to use `2**32` dimensions.
+
+### `ctf_idf_query(query: str, corpus_idf: SparseVector, N: int | None = 10000) -> SparseVector:`
+
+Processes a query, calculating the CTF-IDF vector for it using the corpus IDF
+vector. Set `N=None` to use `2**32` dimensions.
+
+### `ctf_idf_rank(query: str, corpus_idf: SparseVector, text_vecs: dict, N: int | None = 10000) -> list[tuple[float, typing.Any]]:`
+
+Runs CTF-IDF cosine similarity between the query and the text vectors. Returns a
+sorted list of form `[(similarity, key)]`, where `key` is a key of `text_vecs`.
+Set `N=None` to use `2**32` dimensions.
+
+### `ctf_idf_select(query: str, corpus_idf: SparseVector, text_vecs: dict, k: int = 4, N: int | None = 10000) -> list[tuple[float, int]]:`
+
+Runs CTF-IDF cosine similarity between the query and the text vectors. Returns
+the top `k` candidates in a sorted list of form `[(similarity, key)]`, where
+`key` is a key of `text_vecs`. Set `N=None` to use `2**32` dimensions.
 
 ### `hamming_distance(str1: str, str2: str, normalize: bool = False) -> int | float:`
 
@@ -190,15 +247,16 @@ SparseVector max length `36^N`, where element index is ordered by N-Gram
 alphanumeric order, e.g. 000, 001, ..., 0a0, 0a1, ..., zzz. Pass `vec` result of
 `ng_count` to bypass retokenization of the text and recalculation of N-Grams.
 
-### `ngf_rank(query: str, text_vecs: list, N: int = 3) -> list[tuple[float, int]]:`
+### `ngf_rank(query: str, text_vecs: dict, N: int = 3) -> list[tuple[float, int]]:`
 
 Runs NGF cosine similarity between the query and the text vectors. Returns a
-sorted list of form `[(similarity, index)]`.
+sorted list of form `[(similarity, key)]`, where `key` is a key of `text_vecs`.
 
 ### `ngf_select(query: str, text_vecs: dict, k: int = 4, N: int = 3) -> list[tuple[float, int]]:`
 
 Runs NGF cosine similarity between the query and the text vectors. Returns the
-top `k` candidates in a sorted list of form `[(similarity, key)]`.
+top `k` candidates in a sorted list of form `[(similarity, key)]`, where `key`
+is a key of `text_vecs`.
 
 ### `ngf_idf_setup(corpus: dict, N: int = 3, ng_counts: dict = None) -> tuple[vicinus.sparse_vector.SparseVector, dict[typing.Any, vicinus.sparse_vector.SparseVector], dict[typing.Any, vicinus.sparse_vector.SparseVector]]:`
 
@@ -216,12 +274,13 @@ vector.
 ### `ngf_idf_rank(query: str, corpus_idf: SparseVector, text_vecs: dict, N: int = 3) -> list[tuple[float, typing.Any]]:`
 
 Runs NGF-IDF cosine similarity between the query and the text vectors. Returns a
-sorted list of form `[(similarity, key)]`.
+sorted list of form `[(similarity, key)]`, where `key` is a key of `text_vecs`.
 
 ### `ngf_idf_select(query: str, corpus_idf: SparseVector, text_vecs: dict, k: int = 4, N: int = 3) -> list[tuple[float, int]]:`
 
 Runs NGF-IDF cosine similarity between the query and the text vectors. Returns
-the top `k` candidates in a sorted list of form `[(similarity, index)]`.
+the top `k` candidates in a sorted list of form `[(similarity, key)]`, where
+`key` is a key of `text_vecs`.
 
 ### `n_grams(text: str, N: int = 3) -> set[str]:`
 

@@ -1,3 +1,20 @@
+## 0.0.3
+
+- Added new CTF and CTF-IDF mechanisms: CT = CRC32(Token)
+  - Essentially TF/TF-IDF with deterministic indices and tokenizer preprocessing
+  - Can use full `2**32` dimensions of crc32 or smaller; default is 10,000
+  - Integrated into `VectorDB` via `VDBMode.CTF` and `VDBMode.CTF_IDF`
+- Added `SparseVector.__add__` and `SparseVector.__eq__` methods for convenience
+- Improved performance of IDF vector computation from `O(D*|V|^2)` to `O(D*|V|)`
+  - Speed-up from reusing intermediate counts vectors decreased to ~0-9%
+- Improved `VectorDB.__init__` input validation to fail-fast on bad `N` values
+- Bug fixes:
+  - `levenshtein_distance` had an off-by-one error in state space dimensionality
+  - `ngf_index` had the wrong base, causing index collisions; improved similarity
+    score SNRs in test vectors by 15% for NGF and 62% for NGF-IDF
+  - `tokenize` was returning empty tokens when a word contained only non-alnum chars
+- Misc: slightly improved test coverage; improved docstrings; fixed some annotations
+
 ## 0.0.2
 
 - Optimized Levenshtein Distance: converted from recursive function w/ memoization to

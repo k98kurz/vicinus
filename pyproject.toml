@@ -37,6 +37,7 @@ exclude = [
   "/notes",
   "/tests",
   ".github",
+  "/old",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -44,4 +45,5 @@ exclude = [
   "/notes",
   "/tests",
   ".github",
+  "/old",
 ]

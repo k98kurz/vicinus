@@ -2,8 +2,8 @@
 name: vicinus
 description: Guide for using the Vicinus library for fuzzy search/document similarity algorithms. Trigger when user asks about N-Grams, Jaccard Index, TF-IDF, Hamming, Levenshtein, fuzzy search, text comparison, or cosine similarity.
 metadata:
-  version: 0.0.2
-  last-updated: 2026-07-31
+  version: 0.0.3
+  last-updated: 2026-08-11
   author: "Jonathan Voss"
   library-name: "vicinus"
   repository: "https://github.com/k98kurz/vicinus"
@@ -16,33 +16,38 @@ metadata:
 - Use VectorDB when memory use is not a concern (see below for configuration info)
 - Comparing short texts robustly, e.g. autocomplete: use Levenshtein or N-Grams + Jaccard Index w/ defaults
 - Comparing short texts cheaply when insertions/deletions are not expected: use Hamming
-- Comparing/searching larger texts: use Jaccard Index, NGF, or NGF-IDF with N>5
+- Comparing/searching larger texts: use Jaccard Index, NGF, or NGF-IDF with N>=5 to accommodate misspellings/partial token matches, or CTF/CTF-IDF with N=-1 for full token matches
 - Increase N with size of texts to improve signal-to-noise ratio
 - Jaccard Index is less computationally intensive but less precise than NGF/NGF-IDF
 - NGF-IDF requires recomputing vectors for whole corpus when a new text is added
 - NGF does not require recomputing vectors for the whole corpus when a new text is added, but it loses some precision compared to NGF-IDF
+- CTF-IDF is significantly faster than NGF-IDF but cannot accommodate partial token matches; if no misspellings are anticipated, it provides the best SNR
+- CTF is slightly faster than CTF-IDF and does not require storing the IDF vector, but it is less precise in theory
 
 ## VectorDB
 
-This package includes an in-memory vector database that can use Jaccard Index,
-NGF, or NGF-IDF. NGF-IDF is the most accurate, but it takes significantly longer
-to recalculate vectors because it requires recalculating vectors for each text upon
-every add/update/remove (and count all N-Grams across the whole corpus for
-`IDFMode.SAVE_SPACE`). Jaccard Index is the fastest and least accurate, but it works.
-NGF seems to be a reasonable middle-of-the-road choice with better accuracy without
-sacrificing too much performance, so it is the default.
+This package includes an in-memory vector database that can use Jaccard Index, NGF,
+NGF-IDF, CTF, or CTF-IDF. NGF-IDF is the most accurate fuzzy search method, but it
+takes significantly longer to recalculate because it requires recalculating vectors
+for each text upon every add/update/remove (and count all N-Grams across the whole
+corpus for `IDFMode.SAVE_SPACE`). Jaccard Index is the fastest and least accurate,
+but it works. NGF seems to be a reasonable middle-of-the-road choice with better
+accuracy without sacrificing too much performance, so it is the default. CTF and
+CTF-IDF are CRC(Token) semantic search mechanisms; they are fast, but they do not
+match variant spellings or word sequence relations the way the N-Gram methods do.
 
 The `VectorDB` class can be initialized with several options:
-- `N: int`: the size of the N-Gram (default 5)
-- `mode: VDBMode`: one of `VDBMode.JACCARD`, `NGF`, or `NGF_IDF` (default `NGF`)
+- `N: int|None`: the size of the N-Gram (default 5) or CT dimensions (default 10,000)
+- `mode: VDBMode`: one of `VDBMode.JACCARD`, `NGF`, `NGF_IDF`, `CTF`, `CTF_IDF`
+  (default `NGF`)
 - `idf_mode: IDFMode`: one of `IDFMode.SAVE_SPACE` or `IDFMode.SAVE_COUNTS`; valid
-  only for `VDBMode.NGF_IDF` (default `SAVE_SPACE`)
+  only for `VDBMode.NGF_IDF` and `VDBMode.CTF_IDF` (default `SAVE_SPACE`)
 
 ```python
 from vicinus import VectorDB, VDBMode
 
 # setup
-vdb = VectorDB(mode=VDBMode.NGF_IDF)
+vdb = VectorDB(mode=VDBMode.CTF_IDF)
 vdb.set_corpus({
     d.title_or_id: d.content
     for d in documents
@@ -156,6 +161,46 @@ Return values from `ngf_idf_rank` and `ngf_idf_select` have form
 `[(score, index),]`, where `index` is the index of the text vector with the given
 score. `ngf_idf_rank` returns rankings sorted in descending score order.
 
+## CTF & CTF-IDF w/ Cosine Similarity
+
+CTF and CTF-IDF are like TF and TF-IDF, but using CRC(Token)s instead of Terms.
+These are semantic search methods that are much faster than NGF and NGF-IDF, but
+they lack the fuzziness of NGF/NGF-IDF -- only whole token matches are meaningful.
+Additionally, reducing the dimensionality too much severely degrades accuracy by
+grouping tokens into buckets that have no similarity in spelling or meaning; by
+default, the dimensions are set at `N=10_000` for accuracy and performance.
+
+```python
+from vicinus import (
+    ctf, ctf_rank, ctf_select,
+    ctf_idf_setup, ctf_idf_rank, ctf_idf_select,
+)
+
+corpus = {1: "Text 1 is some text...", 2: "Text 2 is another thing...", ...}
+
+# CTF
+vecs = {k: ctf(t) for k, t in corpus.items()}
+query = "text about something"
+# to sort all texts
+rankings = ctf_rank(query, vecs)
+# or select top k=2
+candidates = ctf_select(query, vecs, k=2) # or candidates = select(rankings, 2)
+
+# CTF-IDF
+# initial setup
+corpus_idf, vecs, ctcs = ctf_idf_setup(corpus)
+
+# add another text and recalculate, reusing ct counts
+corpus[new_id] = new_text
+corpus_idf, vecs, ctcs = ctf_idf_setup(corpus, ct_counts=ctcs)
+
+query = "text about something"
+# to sort all texts by cosine similarity
+all_ranked = ctf_idf_rank(query, corpus_idf, vecs)
+# or select the top k=2
+candidates = ctf_idf_select(query, corpus_idf, vecs, 2)
+```
+
 ## Helpers: `rank` and `select`
 
 Helpers for ranking candidates and selecting the top k of rankings.
@@ -174,18 +219,20 @@ candidates = select(rankings, 2)
 ### `N` Parameter
 
 The `N` parameter must be consistent for the math to work, otherwise different
-`ngf_index` values will be used for SparseVectors and no N-Grams will overlap for
-Jaccard Index. It should be tuned to the content being processed; e.g. `N=5`
-outperforms the default `N=3` for the library's text test vectors but may not
-work well on small texts; `N=5` outperformance was confirmed with Jaccard Index,
-NGF, and NGF-IDF.
+`ngf_index`/`ctf_index` values will be used for SparseVectors and no N-Grams will
+overlap for Jaccard Index. It should be tuned to the content being processed; e.g.
+`N=5` outperforms the default `N=3` for the library's text test vectors when using
+N-Gram methods but may not work well on small texts; `N=5` outperformance was
+confirmed with Jaccard Index, NGF, and NGF-IDF. For CTF/CTF-IDF, a default N value
+of 10,000 was determined to be functional.
 
-### NGF-IDF Vector Recomputation
+### NGF-IDF/CTF-IDF Vector Recomputation
 
 Whenever a new text is added to the corpus, the whole corpus must be re-processed.
-It is possible to reuse and pass `ng_counts` to `ngf_idf_setup` for a 10-17% speed-
-up. Just make sure to remove/unset keys from that dict for texts that have been
-changed or deleted.
+It is possible to reuse and pass `ng_counts` to `ngf_idf_setup` for a 0-9% speed
+up. Reusing and passing `ct_counts` to `ctf_idf_setup` has resulted in <1% speed up
+in testing. Just make sure to remove/unset keys from that dict for texts that have
+been changed or deleted. VectorDB manages this automatically.
 
 ## Advanced Use
 
@@ -197,10 +244,12 @@ The library exposes a `SparseVector` class which has the following methods:
 - `__iter__(self) -> Iterator`
 - `__len__(self) -> int`
 - `__repr__(self) -> str`
+- `__add__(self, other: SparseVector) -> SparseVector`
+- `__eq__(self, other: SparseVector) -> bool`
 - `get(self, index: int, default = 0) -> int|float`
 - `keys(self) -> set[int]`
 - `values(self) -> ValuesView[int|float]`
-- `items(self) -> ItemsView[tuple[int, int|float]]`
+- `items(self) -> ItemsView[int, int|float]`
 - `norm(self) -> float`
 - `dot_product(self, other: SparseVector) -> float`
 - `cosine_similarity(self, other: SparseVector) -> float`
@@ -212,6 +261,8 @@ The library exposes some additional functions that may be useful for experimenta
 - `ngf_index(ng: str) -> int`: calculate the NGF vec index for a given alnum N-Gram
 - `ngf_idf_query(query: str, corpus_idf: SparseVector, N: int=3) -> SparseVector`:
   proceses a query into an NGF-IDF vector; used by `ngf_idf_rank` and `ngf_idf_select`
+- `ctf_index(token: str, N: int = None) -> int`
+- `ctf_idf_query(query: str, corpus_idf: SparseVector, N: int|None=10000) -> SparseVector`
 - `list_samples() -> list[str]`: lists bundled text samples
 - `get_sample(name: str) -> str`: returns the content of a named text sample
 

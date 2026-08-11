@@ -1,16 +1,22 @@
 # Vicinus
 
 Vicinus is a library for building fuzzy search tools. It includes multiple
-similarity/distance algorithms, an in-memory vector DB, and an optional
-persistent vector DB using my sqloquent ORM package (sqlite3). Made from
-all-organic, artisanal, 100% hand-crafted code with no gen AI (except to write
-some text samples for testing) and no external dependencies.
+similarity/distance algorithms and an in-memory vector DB. In the future, it will
+include an optional persistent vector DB using the sqloquent ORM (sqlite3) and a
+TCP server/client using netaio.
+
+Made from all-organic, artisanal, 100% hand-crafted code with no gen AI (except to
+write some text samples for testing) and no required external dependencies.
 
 This library includes several standard algorithms as well as a few novel (to my
 knowledge) constructions: NGF and NGF-IDF, adapted from TF and TF-IDF but using
 N-Grams to construct a comprehensive lexicon (26 letters + 10 numerals). The goal
 of these novel constructions is to provide a lightweight alternative to text
-embedding models and full TF-IDF while preserving utility for fuzzy searching.
+embedding models and full TF-IDF while preserving utility for fuzzy searching. A
+dimensionality-reduced form of TF/TF-IDF is included: CTF/CTF-IDF, where
+`CT = CRC(Token)`; this is less fuzzy than NGF/NGF-IDF since similar words are placed
+into different index buckets, but it is substantially faster and more precise when
+used with sufficient dimensionality (can be run with full crc32 range of `2^32`).
 
 ("Vicinus" means "neighboring/nearby" in Latin.)
 
@@ -21,11 +27,14 @@ embedding models and full TF-IDF while preserving utility for fuzzy searching.
 - [x] N-Gram Extraction
 - [x] Jaccard Index
 - [x] Sparse Vector Cosine Similarity
-- [x] NGF (N-Gram Frequency)
-- [x] NGF-IDF (N-Gram Frequency * Inverse Document Frequecy)
+- [x] NGF: N-Gram Frequency
+- [x] NGF-IDF: N-Gram Frequency * Inverse Document Frequecy
+- [x] CTF: CRC(Token) Frequency
+- [x] CTF-IDF: CRC(Token) Frequency * Inverse Document Frequency
 - [x] Optimizations: Levenshtein, NGF-IDF (reuse intermediate states)
-- [x] In-Memory VectorDB: Jaccard, NGF, NGF-IDF
-- [ ] Persistent VectorDB: Jaccard, NGF, NGF-IDF (sqloquent)
+- [x] In-Memory VectorDB: Jaccard, NGF, NGF-IDF, CTF, CTF-IDF
+- [ ] Persistent VectorDB: Jaccard, NGF, NGF-IDF, CTF, CTF-IDF (sqloquent; optional)
+- [ ] TCP server/client (netaio; optional)
 
 Open issues can be tracked [here](https://github.com/k98kurz/vicinus/issues).
 Historical changes can be found in the
@@ -69,18 +78,26 @@ There is also a `vicinus version` subcommand that prints the package version.
 ### VectorDB
 
 This package includes an in-memory vector database that can use Jaccard Index,
-NGF, or NGF-IDF. NGF-IDF is the most accurate, but it takes significantly longer
-to recalculate vectors due to the IDF component requiring recounting N-Grams
-across the whole corpus and recalculating vectors for each text upon every add/
-update/remove. Jaccard Index is the fastest and least accurate, but it works. NGF
-seems to be a reasonable middle-of-the-road choice with better accuracy without
-sacrificing too much performance, so it is the default.
+NGF, NGF-IDF, CTF, or CTF-IDF. NGF-IDF is the most accurate, but it takes
+significantly longer to recalculate vectors due to the IDF component requiring
+recounting N-Grams across the whole corpus and recalculating vectors for each text
+upon every add/update/remove. Jaccard Index is the fastest and least accurate of the
+fuzzy search methods, but it works. NGF seems to be a reasonable middle-of-the-road
+choice with better accuracy without sacrificing too much performance, so it is the
+default. CTF and CTF-IDF use CRC(Token) % N to produce a reduced dimensionality TF
+or TF-IDF implementation; it preserves semantic search while giving up substantial
+fuzzy search capabilities since there must be an exact token match; the tuning of `N`
+has a substantial and unpredictable effect due to index collisions; to avoid index
+collisions, use a very large `N` value, e.g. `10**6`, or set to -1 (default is
+10,000). CTF and CTF-IDF with full CRC32 range have the highest SNR as long as there
+are no misspellings in the query or the corpus to be searched.
 
 The `VectorDB` class can be initialized with several options:
-- `N: int`: the size of the N-Gram (default 5)
-- `mode: VDBMode`: one of `VDBMode.JACCARD`, `NGF`, or `NGF_IDF` (default `NGF`)
+- `N: int|None`: the size of the N-Gram (default 5) or CT dimensions (default 10,000)
+- `mode: VDBMode`: one of `VDBMode.JACCARD`, `NGF`, `NGF_IDF`, `CTF`, `CTF_IDF`
+  (default `NGF`)
 - `idf_mode: IDFMode`: one of `IDFMode.SAVE_SPACE` or `IDFMode.SAVE_COUNTS`; valid
-  only for `VDBMode.NGF_IDF` (default `SAVE_SPACE`)
+  only for `VDBMode.NGF_IDF` and `VDBMode.CTF_IDF` (default `SAVE_SPACE`)
 
 ```python
 from vicinus import VectorDB, VDBMode
@@ -101,9 +118,10 @@ doc = vdb.get(res[0][1]) # (str content, [SparseVector|set[str]])
 ```
 
 The second element returned by `VectorDB.get` will be a list with a `SparseVector`
-or `set[str]` as the first element (for NGF/NGF-IDF or Jaccard, respectively) and
-optionally a second `SparseVector` including the N-Gram counts for the record for
-`mode=VDBMode.NGF_IDF` and `idf_mode=IDFMode.SAVE_COUNTS`.
+or `set[str]` as the first element (for NGF/NGF-IDF/CTF/CTF-IDF or Jaccard,
+respectively) and optionally a second `SparseVector` including the N-Gram/CT counts
+for the record for `mode=VDBMode.NGF_IDF`/`mode=VDBMode.CTF_IDF` and
+`idf_mode=IDFMode.SAVE_COUNTS`.
 
 Note that `IDFMode.SAVE_COUNTS` has thus far not shown much performance benefit in
 testing, though the underlying setup mechanism was proven to be faster.
@@ -119,6 +137,8 @@ There are vectorized similarity mechanisms:
 - N-Grams w/ Jaccard Index (technically a set, not a vector)
 - NGF w/ Cosine Similarity
 - NGF-IDF w/ Cosine Similarity
+- CTF w/ Cosine Similarity
+- CTF-IDF w/ Cosine Similarity
 
 There are three other functions useful for building fuzzy search tools:
 - `rank(score_fn: Callable, candidates: dict[K, V]) -> list[tuple[float, K]]`
@@ -237,18 +257,59 @@ candidates = ngf_idf_select(query, corpus_idf, vecs, 2, N=3)
 ```
 
 Note: N=5 resulted in far more accurate rankings for the test vectors than the
-default N=3 for Jaccard Index, NGF, and NGF-IDF. This may require some tuning.
+standard N=3 for Jaccard Index, NGF, and NGF-IDF. This may require some tuning.
 Higher `N` values lead to sparser vectors and lower cosine similarity/Jaccard
-Index scores, but this appears to be primarily a culling of noise.
+Index scores, but this appears to be primarily a culling of noise. For smaller
+texts, N=3 is probably sufficient.
+
+#### CTF & CTF-IDF w/ Cosine Similarity
+
+CTF and CTF-IDF are like TF and TF-IDF, but using CRC(Token)s instead of Terms.
+These are semantic search methods that are much faster than NGF and NGF-IDF, but
+they lack the fuzziness of NGF/NGF-IDF -- only whole token matches are meaningful.
+Additionally, reducing the dimensionality too much severely degrades accuracy by
+grouping tokens into buckets that have no similarity in spelling or meaning; by
+default, the dimensions are set at `N=10_000` for accuracy and performance.
+
+```python
+from vicinus import (
+    ctf, ctf_rank, ctf_select,
+    ctf_idf_setup, ctf_idf_rank, ctf_idf_select,
+)
+
+corpus = {1: "Text 1 is some text...", 2: "Text 2 is another thing...", ...}
+
+# CTF
+vecs = {k: ctf(t) for k, t in corpus.items()}
+query = "text about something"
+# to sort all texts
+rankings = ctf_rank(query, vecs)
+# or select top k=2
+candidates = ctf_select(query, vecs, k=2) # or candidates = select(rankings, 2)
+
+# CTF-IDF
+# initial setup
+corpus_idf, vecs, ngcs = ctf_idf_setup(corpus)
+
+# add another text and recalculate, reusing ct counts
+corpus[new_id] = new_text
+corpus_idf, vecs, ctcs = ctf_idf_setup(corpus, ct_counts=ctcs)
+
+query = "text about something"
+# to sort all texts by cosine similarity
+all_ranked = ctf_idf_rank(query, corpus_idf, vecs)
+# or select the top k=2
+candidates = ctf_idf_select(query, corpus_idf, vecs, 2)
+```
 
 #### SparseVector
 
 The `SparseVector` class stores non-0 values and their indices. It implements several
-noteworth methods:
+noteworthy methods:
 - `get(self, index: int, default = 0) -> int|float`
 - `keys(self) -> set[int]`
 - `values(self) -> ValuesView[int|float]`
-- `items(self) -> ItemsView[tuple[int, int|float]]`
+- `items(self) -> ItemsView[int, int|float]`
 - `norm(self) -> float`
 - `dot_product(self, other: SparseVector) -> float`
 - `cosine_similarity(self, other: SparseVector) -> float`
@@ -264,8 +325,9 @@ can be found [here](https://github.com/k98kurz/vicinus/blob/master/docs.md).
 All code and documentation (except docs.md) was written by hand, including the
 test suite. I used mistral and gemma4:e4b (running on my own machine via ollama
 with some fun bashfu) to write the text samples for testing (they are slop). I
-also used gemma4:31b via Ollama cloud in OpenCode for code review (it caught a
-few loose ends and documentation issues).
+also used gemma4:31b OpenCode for code review (it caught a few loose ends and
+documentation issues). A few additional issues were caught by GLM-5.2 in OpenCode
+during a transpilation task from Python into Go, which I then fixed.
 
 The inspiration for this library came during development of a yet unreleased new
 agentic harness system that I intend to optimize for small, local models: as I
@@ -292,7 +354,7 @@ pip install -e . # or use uv
 python -m unittest discover tests
 ```
 
-There are currently 46 tests covering all functionality except the CLI, which is
+There are currently 67 tests covering all functionality except the CLI, which is
 tested manually. Note that one of the tests occasionally fails due to floating
 point arithmetic behaviors, and one asserting better performance for
 `IDFMode.SAVE_COUNTS` occasionally fails, perhaps due to unpredictable memory

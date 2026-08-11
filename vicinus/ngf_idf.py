@@ -140,7 +140,8 @@ def ngf_idf_query(
     type_assert(type(query) is str, 'query must be str')
     type_assert(isinstance(corpus_idf, SparseVector),
         'corpus_idf must be SparseVector')
-    value_assert(N > 0, 'N must be >0') if N is not None else N
+    type_assert(type(N) is int, 'N must be int')
+    value_assert(N > 0, 'N must be >0')
 
     # 1: NG count for query
     ngc = ng_count(query, N=N)
